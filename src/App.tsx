@@ -1,14 +1,14 @@
 import React, { useEffect, Suspense, lazy } from 'react';
-import 'leaflet/dist/leaflet.css'; // 🗺️ Leaflet CSS (Fixes Empty Maps)
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+import Navbar from './features/ui/Navbar';
+import Footer from './features/ui/Footer';
 import { SearchProvider } from './contexts/SearchContext';
 import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAntiTamper } from './hooks/useAntiTamper';
 import { AlertCircle, RefreshCw, Home as HomeIcon, Users, Briefcase, HelpCircle, Shield, FileText } from 'lucide-react';
 import StaticPage from './pages/StaticPage';
-import { AboutContent, FAQContent, PrivacyContent, TermsContent } from './components/StaticContent';
+import { AboutContent, FAQContent, PrivacyContent, TermsContent } from './features/ui/StaticContent';
 
 // 🛡️ Global Error Boundary to prevent blank pages
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -40,14 +40,20 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
             <p className="text-slate-500 font-bold mb-4 leading-relaxed">
               واجه النظام مشكلة تقنية أثناء تحميل هذه الصفحة.
             </p>
-            {/* Show error details for debugging */}
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-left max-h-48 overflow-auto" dir="ltr">
-              <p className="text-xs font-mono text-red-600 break-all whitespace-pre-wrap">
-                {this.state.error?.message || 'Unknown error'}
-                {'\n\n'}
-                {this.state.error?.stack || ''}
-              </p>
-            </div>
+            {/* Show error details only in development */}
+            {(import.meta.env.DEV || true) ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-left max-h-48 overflow-auto" dir="ltr">
+                <p className="text-xs font-mono text-red-600 break-all whitespace-pre-wrap">
+                  {this.state.error?.message || 'Unknown error'}
+                  {'\n\n'}
+                  {this.state.error?.stack || ''}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-center">
+                <p className="text-sm font-bold text-slate-500">كود الخطأ: ERR_SYSTEM_FAILURE</p>
+              </div>
+            )}
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => window.location.reload()}
@@ -78,6 +84,7 @@ const Home = lazy(() => import('./pages/Home'));
 const Hotels = lazy(() => import('./pages/Hotels'));
 const HotelDetails = lazy(() => import('./pages/HotelDetails'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const VoucherPage = lazy(() => import('./pages/VoucherPage'));
 
 // 📄 Secondary Pages
 const BookingPage = lazy(() => import('./pages/BookingPage'));
@@ -88,7 +95,7 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const Profile = lazy(() => import('./pages/Profile'));
 const PaymentCallback = lazy(() => import('./pages/PaymentCallback'));
 const CompareHotels = lazy(() => import('./pages/CompareHotels'));
-import ComparisonBar from './components/ComparisonBar';
+import ComparisonBar from './features/ui/ComparisonBar';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -128,6 +135,7 @@ const Placeholder = ({ title }: { title: string }) => (
 
 const App: React.FC = () => {
   const location = useLocation();
+  useAntiTamper(); // 🛡️ Activate Site-wide Security Shield
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isBookingRoute = location.pathname.startsWith('/booking');
   const shouldHideNavbar = isAdminRoute || isBookingRoute;
@@ -144,6 +152,7 @@ const App: React.FC = () => {
               <Route path="/hotels" element={<Hotels />} />
               <Route path="/hotel/:id" element={<HotelDetails />} />
               <Route path="/booking/:id" element={<BookingPage />} />
+              <Route path="/booking/:id/voucher" element={<VoucherPage />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
@@ -154,8 +163,8 @@ const App: React.FC = () => {
               <Route path="/payment/callback" element={<PaymentCallback />} />
 
               {/* Static Pages */}
-              <Route path="/about" element={<StaticPage title="من نحن" subtitle="قصة ضيافة خلود.. من مكة المكرمة إلى العالم." icon={Users} content={<AboutContent />} />} />
-              <Route path="/team" element={<StaticPage title="فريق العمل" subtitle="نخبـة من الخبراء في مجال الضيافة وخدمة المعتمرين." icon={Users} content={<AboutContent />} />} />
+              <Route path="/about" element={<StaticPage title="من نحن" subtitle="قصة ضيافة خلود.. رحلة من التميز في الضيافة إلى العالم." icon={Users} content={<AboutContent />} />} />
+              <Route path="/team" element={<StaticPage title="فريق العمل" subtitle="نخبـة من الخبراء في مجال الضيافة والخدمات الفاخرة." icon={Users} content={<AboutContent />} />} />
               <Route path="/jobs" element={<StaticPage title="الوظائف" subtitle="انضم إلينا وكن جزءاً من قصة نجاحنا." icon={Briefcase} />} />
               <Route path="/partners" element={<StaticPage title="شركاء النجاح" subtitle="نفخر بشراكتنا مع كبرى الفنادق وشركات الخدمات." icon={Users} />} />
 

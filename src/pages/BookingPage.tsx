@@ -7,10 +7,10 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { COUNTRIES } from '../constants';
-import { useSearch, formatDateArabic } from '../contexts/SearchContext';
+import { useSearch, formatDateArabic, formatDateISO } from '../contexts/SearchContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createPaymentPage } from '../services/paytabs';
-import { HotelsAPI, BookingsAPI, AuthAPI, Hotel as HotelType, Room, TokenManager } from '../services/api';
+import { HotelsAPI, BookingsAPI, AuthAPI, CouponsAPI, Hotel as HotelType, Room, TokenManager } from '../services/api';
 
 const BookingPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -39,38 +39,99 @@ const BookingPage = () => {
         checkIn?: string;
         checkOut?: string;
     } | null;
-    const [extraBedCount, setExtraBedCount] = useState(state?.extraBedCount || 0);
+    const [extraBedCount, setExtraBedCount] = useState(state?.extraBedCount || searchData.extraBeds || 0);
     const [roomCount, setRoomCount] = useState(state?.roomCount || 1);
 
     // Guest form data
     const [guestName, setGuestName] = useState('');
     const [guestEmail, setGuestEmail] = useState('');
     const [guestPhone, setGuestPhone] = useState('');
+    const [nationality, setNationality] = useState('');
     const [password, setPassword] = useState(''); // For registration
-    const { user: authUser, login: authLogin } = useAuth();
+    const { user: authUser, login: authLogin, logout: authLogout } = useAuth();
     const [isLoggedIn, setIsLoggedIn] = useState(!!authUser);
 
-    // Sync local isLoggedIn with auth context
+    // Sync local isLoggedIn with auth context and pre-fill data
     useEffect(() => {
         setIsLoggedIn(!!authUser);
+        if (authUser) {
+            if (authUser.email) setGuestEmail(authUser.email);
+            if (authUser.name) setGuestName(authUser.name);
+            if (authUser.phone) {
+                // Try to strip dial code if present or just set it
+                const phone = authUser.phone.replace(/^\+\d+/, '');
+                setGuestPhone(phone);
+            }
+        }
     }, [authUser]);
 
     const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // Default SA
     const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
     const [countrySearch, setCountrySearch] = useState('');
+    const [isNationalityDropdownOpen, setIsNationalityDropdownOpen] = useState(false);
+    const [nationalitySearch, setNationalitySearch] = useState('');
 
     const filteredCountries = COUNTRIES.filter(c =>
         c.name.includes(countrySearch) || c.dial_code.includes(countrySearch) || c.code.toLowerCase().includes(countrySearch.toLowerCase())
     );
 
+    const filteredNationalities = COUNTRIES.filter(c =>
+        c.name.includes(nationalitySearch) || c.code.toLowerCase().includes(nationalitySearch.toLowerCase())
+    );
+
     // Coupon State
-    const [couponCode, setCouponCode] = useState(searchData.promoCode || '');
-    const [couponDiscount, setCouponDiscount] = useState(searchData.couponDiscount || 0); // Percentage
-    const [isCouponApplied, setIsCouponApplied] = useState(!!searchData.couponDiscount && searchData.couponDiscount > 0);
+    const [couponCode, setCouponCode] = useState((state as any)?.promoCode || searchData.promoCode || '');
+    const [couponDiscount, setCouponDiscount] = useState((state as any)?.couponDiscount || searchData.couponDiscount || 0); // Percentage
+    const [isCouponApplied, setIsCouponApplied] = useState((!!(state as any)?.promoCode) || (!!searchData.couponDiscount && searchData.couponDiscount > 0));
     const [couponError, setCouponError] = useState('');
-    const [couponSuccess, setCouponSuccess] = useState(!!searchData.couponDiscount ? `تم تطبيق خصم ${searchData.couponDiscount}% مسبقاً` : '');
+    const [couponSuccess, setCouponSuccess] = useState(
+        (state as any)?.promoCode
+            ? `تم تطبيق خصم ${(state as any)?.couponDiscount}% مسبقاً`
+            : (!!searchData.couponDiscount ? `تم تطبيق خصم ${searchData.couponDiscount}% مسبقاً` : '')
+    );
     const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
     const [showCouponInput, setShowCouponInput] = useState(false);
+
+    // Dynamic Account Check State
+    const [emailExists, setEmailExists] = useState(false);
+    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+    const [hasCheckedEmail, setHasCheckedEmail] = useState(false);
+
+    // Real-time Email Verification
+    useEffect(() => {
+        if (isLoggedIn) return; // Skip if already logged in
+
+        const checkEmail = async () => {
+            if (!guestEmail.trim() || !guestEmail.includes('@')) {
+                setEmailExists(false);
+                setHasCheckedEmail(false);
+                return;
+            }
+
+            setIsCheckingEmail(true);
+            try {
+                const res = await AuthAPI.checkEmail(guestEmail.trim());
+                if (res.success && res.data) {
+                    setEmailExists(res.data.exists);
+                    setHasCheckedEmail(true);
+                    // Proactive UX: if email exists, hint them
+                    if (res.data.exists) {
+                        setError(''); // Clear previous "account doesn't exist" errors if any
+                    }
+                }
+            } catch (err) {
+                console.error('Email check failed', err);
+            } finally {
+                setIsCheckingEmail(false);
+            }
+        };
+
+        // Reset check status while typing to hide password field immediately
+        setHasCheckedEmail(false);
+
+        const timer = setTimeout(checkEmail, 600); // 600ms debounce
+        return () => clearTimeout(timer);
+    }, [guestEmail, isLoggedIn]);
 
     // Fetch Hotel & User Data
     useEffect(() => {
@@ -159,7 +220,11 @@ const BookingPage = () => {
             setError('الرجاء إدخال رقم هاتف صحيح');
             return false;
         }
-        if (!isLoggedIn && !password.trim()) {
+        if (!nationality.trim()) {
+            setError('الرجاء اختيار الجنسية');
+            return false;
+        }
+        if (!isLoggedIn && !emailExists && !password.trim()) {
             setError('الرجاء إدخال كلمة مرور لإنشاء الحساب');
             return false;
         }
@@ -174,32 +239,50 @@ const BookingPage = () => {
         setCouponSuccess('');
 
         try {
-            const res = await fetch('http://localhost:3001/api/coupons/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: couponCode })
-            });
-            const data = await res.json();
+            const res = await CouponsAPI.verify(couponCode, hotel?.id);
 
-            if (data.valid) {
-                setCouponDiscount(data.discount);
+            if (res.success && res.data) {
+                setCouponDiscount(res.data.discount);
                 setIsCouponApplied(true);
-                setCouponSuccess(`تم تطبيق خصم ${data.discount}% بنجاح!`);
+                setCouponSuccess(`تم تطبيق خصم ${res.data.discount}% بنجاح!`);
                 setShowCouponInput(false);
 
-                // 🎉 Celebration Effect
-                const duration = 3 * 1000;
-                const animationEnd = Date.now() + duration;
-                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-                const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+                // 🎉 ADVANCED CELEBRATION EFFECT (The "WOW" Factor)
+                const end = Date.now() + 3 * 1000;
+                const colors = ['#D4AF37', '#FFD700', '#F0E68C', '#ffffff']; // Gold & White Theme
 
-                const interval: any = setInterval(function () {
-                    const timeLeft = animationEnd - Date.now();
-                    if (timeLeft <= 0) return clearInterval(interval);
-                    const particleCount = 50 * (timeLeft / duration);
-                    confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-                    confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-                }, 250);
+                (function frame() {
+                    confetti({
+                        particleCount: 4,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0 },
+                        colors: colors,
+                        zIndex: 2000
+                    });
+                    confetti({
+                        particleCount: 4,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1 },
+                        colors: colors,
+                        zIndex: 2000
+                    });
+
+                    if (Date.now() < end) {
+                        requestAnimationFrame(frame);
+                    }
+                }());
+
+                // Big Center Burst for immediate impact
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    colors: colors,
+                    zIndex: 2000,
+                    scalar: 1.2
+                });
 
                 // 📜 Smooth Scroll to Summary
                 setTimeout(() => {
@@ -207,7 +290,7 @@ const BookingPage = () => {
                 }, 500);
 
             } else {
-                setCouponError(data.message || 'الكوبون غير صالح أو انتهت صلاحيته');
+                setCouponError(res.error || 'الكوبون غير صالح أو لا ينطبق على هذا الفندق');
                 setIsCouponApplied(false);
                 setCouponDiscount(0);
             }
@@ -225,44 +308,41 @@ const BookingPage = () => {
         setError('');
 
         try {
-            // 1. Register/Login if not logged in
+            // 1. Smart Register/Auth Logic
             if (!isLoggedIn) {
-                let currentToken = '';
-                let currentUser = null;
-
-                // Priority 1: Try Register
-                const registerRes = await AuthAPI.register({
-                    name: guestName.trim(),
-                    email: guestEmail.trim(),
-                    phone: `${selectedCountry.dial_code}${guestPhone}`,
-                    password: password,
-                    country: selectedCountry.name
-                });
-
-                if (registerRes.success && registerRes.data) {
-                    currentToken = registerRes.data.token;
-                    currentUser = registerRes.data.user;
-                } else if (registerRes.error?.includes('Email already registered')) {
-                    // Priority 2: Try Login if already registered
-                    const loginRes = await AuthAPI.login(guestEmail.trim(), password);
-                    if (loginRes.success && loginRes.data) {
-                        currentToken = loginRes.data.token;
-                        currentUser = loginRes.data.user;
-                    } else {
-                        throw new Error(loginRes.error || 'فشل تسجيل الدخول. يرجى التأكد من كلمة المرور.');
-                    }
-                } else {
-                    // Clear stale token if any weird error happens
-                    TokenManager.remove();
-                    throw new Error(registerRes.error || 'فشل إنشاء الحساب');
+                // Scenario A: Existing Email -> Skip Registration (Backend will link by email)
+                if (emailExists) {
+                    console.log('Existing email detected, proceeding as guest-link-booking');
+                    // No action needed here, we just don't try to register/login
                 }
+                // Scenario B: New Email -> Register
+                else {
+                    let currentToken = '';
+                    let currentUser = null;
 
-                // Sync with Global Auth Context
-                if (currentToken && currentUser) {
-                    TokenManager.set(currentToken); // Ensure storage is set FIRST
-                    authLogin(currentToken, currentUser);
-                } else {
-                    throw new Error('فشل التحقق من الجلسة');
+                    const registerRes = await AuthAPI.register({
+                        name: guestName.trim(),
+                        email: guestEmail.trim(),
+                        phone: `${selectedCountry.dial_code}${guestPhone}`,
+                        password: password,
+                        country: selectedCountry.name
+                    });
+
+                    if (registerRes.success && registerRes.data) {
+                        currentToken = registerRes.data.token;
+                        currentUser = registerRes.data.user;
+
+                        // Sync with Global Auth Context
+                        TokenManager.set(currentToken);
+                        authLogin(currentToken, currentUser);
+                    } else {
+                        // If somehow it fails with "already registered" between check and submit
+                        if (registerRes.error?.includes('already exists')) {
+                            console.log('Email registered during checkout, proceeding with linking');
+                        } else {
+                            throw new Error(registerRes.error || 'فشل إنشاء الحساب');
+                        }
+                    }
                 }
             }
 
@@ -275,14 +355,15 @@ const BookingPage = () => {
 
             const bookingRes = await BookingsAPI.create({
                 roomId: roomId,
-                checkIn: effectiveCheckIn ? effectiveCheckIn.toISOString() : new Date().toISOString(),
-                checkOut: effectiveCheckOut ? effectiveCheckOut.toISOString() : new Date(Date.now() + 86400000).toISOString(),
+                checkIn: effectiveCheckIn ? formatDateISO(effectiveCheckIn) : formatDateISO(new Date()),
+                checkOut: effectiveCheckOut ? formatDateISO(effectiveCheckOut) : formatDateISO(new Date(Date.now() + 86400000)),
                 guestsCount: searchData.adults || 2,
                 roomCount: roomCount,
                 extraBedCount: extraBedCount,
                 guestName: guestName,
                 guestEmail: guestEmail.trim(),
                 guestPhone: `${selectedCountry.dial_code}${guestPhone}`,
+                nationality: nationality,
                 specialRequests: '',
                 promoCode: isCouponApplied ? couponCode : undefined // <--- Pass Promo Code
             });
@@ -307,9 +388,9 @@ const BookingPage = () => {
                     name: guestName,
                     email: guestEmail,
                     phone: `${selectedCountry.dial_code}${guestPhone}`,
-                    street1: 'مكة المكرمة',
-                    city: 'مكة',
-                    state: 'مكة',
+                    street1: 'المملكة العربية السعودية',
+                    city: 'الرياض',
+                    state: 'المنطقة الوسطى',
                     country: selectedCountry.code || 'SA',
                     ip: '1.1.1.1'
                 },
@@ -381,15 +462,20 @@ const BookingPage = () => {
                     </div>
 
                     {/* Left Side: Professional Support */}
-                    <div className="flex items-center gap-4">
+                    <a
+                        href="https://wa.me/966553882445"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-4 hover:opacity-80 transition-opacity"
+                    >
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">دعم ضيافة خلود</span>
-                            <span className="text-xs font-black text-secondary tracking-tighter" dir="ltr">055 388 2445</span>
+                            <span dir="ltr" className="text-xs font-black text-secondary tracking-tighter inline-block">+966 55 388 2445</span>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-gold">
                             <Phone size={18} />
                         </div>
-                    </div>
+                    </a>
                 </div>
             </header>
 
@@ -453,169 +539,192 @@ const BookingPage = () => {
                                 </div>
                             </div>
 
-                            {/* Booking Details - Concierge Grid Style */}
-                            <div className="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50">
-                                <div className="flex items-center justify-between mb-8">
+                            {/* Booking Details - Receipt Style Redesign */}
+                            <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 overflow-hidden">
+                                {/* Header Strip */}
+                                <div className="bg-slate-50/50 border-b border-slate-100 p-6 flex items-center justify-between">
                                     <h3 className="font-black text-secondary text-lg flex items-center gap-3">
                                         <div className="w-1.5 h-6 bg-gold rounded-full" />
-                                        تفاصيل الإقامة
+                                        تفاصيل الحجز
                                     </h3>
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
                                         رقم المرجع: #{Math.random().toString(36).substr(2, 6).toUpperCase()}
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
-                                    {/* Room Info */}
-                                    <div className="flex flex-col gap-6 p-6 rounded-2xl bg-slate-50/50 border border-slate-100 group hover:border-gold/20 transition-all duration-300">
-                                        <div className="flex items-start gap-4">
-                                            <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
-                                                <Hotel size={22} />
-                                            </div>
-                                            <div>
-                                                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">فئة الغرفة المختارة</span>
-                                                <span className="block text-secondary font-black text-sm">{roomType}</span>
-                                            </div>
-                                        </div>
+                                <div className="p-8">
+                                    {/* 1. Timeline Section - Top */}
+                                    <div className="bg-secondary rounded-[1.5rem] p-6 text-white mb-8 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-gold/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
-                                        {/* Room Specs Grid */}
-                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200/50">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-gold">
-                                                    <Maximize size={14} />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">مساحة الغرفة</span>
-                                                    <span className="text-[11px] font-bold text-secondary">{selectedRoom?.area || '---'} م²</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-gold">
-                                                    <Eye size={14} />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">الإطلالة</span>
-                                                    <span className="text-[11px] font-bold text-secondary">{selectedRoom?.view || 'إطلالة مدينة'}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-gold">
-                                                    <BedDouble size={14} />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">توزيع الأسرة</span>
-                                                    <span className="text-[11px] font-bold text-secondary">{selectedRoom?.beds || 'أسرة ملكية'}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-gold">
-                                                    <Users size={14} />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">السعة القصوى</span>
-                                                    <span className="text-[11px] font-bold text-secondary">{selectedRoom?.capacity || 2} أشخاص</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Guests Info */}
-                                    <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 group hover:border-gold/20 transition-all duration-300">
-                                        <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
-                                            <User size={22} />
-                                        </div>
-                                        <div>
-                                            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">الضيوف والحجوزات</span>
-                                            <span className="block text-secondary font-black text-sm">
-                                                {searchData.adults || 2} بالغين · {roomCount} غرف
-                                                {searchData.children > 0 && <span className="opacity-60 block text-[11px] font-bold mt-0.5">+ {searchData.children} أطفال</span>}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Dates Info */}
-                                    <div className="sm:col-span-2 flex items-center gap-6 p-6 rounded-[1.5rem] bg-secondary text-white relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-gold/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-
-                                        <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-gold group-hover:scale-110 transition-transform">
-                                            <Calendar size={28} />
-                                        </div>
-
-                                        <div className="flex-1 grid grid-cols-2 items-center gap-8 relative z-10">
-                                            <div>
+                                        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-0">
+                                            {/* Check In */}
+                                            <div className="text-center md:text-right flex-1">
                                                 <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 opacity-70">تاريخ الوصول</span>
-                                                <span className="block font-black text-lg leading-none">{formatDateArabic(searchData.checkIn)}</span>
-                                            </div>
-                                            <div className="border-r border-white/10 pr-8 relative">
-                                                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                                                    <ArrowLeft size={12} className="text-gold" />
+                                                <div className="flex items-center justify-center md:justify-start gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-gold">
+                                                        <Calendar size={18} />
+                                                    </div>
+                                                    <span className="font-black text-2xl tracking-tight">{formatDateArabic(searchData.checkIn)}</span>
                                                 </div>
+                                            </div>
+
+                                            {/* Duration Pill */}
+                                            <div className="flex flex-col items-center px-8 relative">
+                                                <div className="h-px w-full bg-white/10 absolute top-1/2 -translate-y-1/2 md:block hidden" />
+                                                <div className="bg-gold text-secondary px-5 py-2 rounded-full text-sm font-black shadow-lg shadow-gold/20 relative z-10 whitespace-nowrap">
+                                                    {nights} ليالي
+                                                </div>
+                                            </div>
+
+                                            {/* Check Out */}
+                                            <div className="text-center md:text-left flex-1">
                                                 <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 opacity-70">تاريخ المغادرة</span>
-                                                <span className="block font-black text-lg leading-none">{formatDateArabic(searchData.checkOut)}</span>
+                                                <div className="flex items-center justify-center md:justify-end gap-3 flex-row-reverse md:flex-row">
+                                                    <span className="font-black text-2xl tracking-tight">{formatDateArabic(searchData.checkOut)}</span>
+                                                    <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-gold">
+                                                        <ArrowLeft size={18} />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-
-                                        <div className="bg-gold text-secondary px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-gold/20">
-                                            {nights} ليالي
-                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Extra Bed Details if applicable */}
-                                {(selectedRoom?.allowExtraBed && extraBedCount > 0) ? (
-                                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-5 mb-8 flex items-center justify-between group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-110">
-                                                <BedDouble size={22} />
+                                    {/* 2. Details Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                        {/* Room Block */}
+                                        <div className="flex gap-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                                                <Hotel size={24} />
                                             </div>
                                             <div>
-                                                <span className="block text-secondary font-black text-sm">سرير إضافي مضاف</span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">تحسين الراحة والخصوصية</span>
+                                                <span className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-1">الوحدة المحجوزة</span>
+                                                <h4 className="text-base font-black text-secondary mb-2">{roomType}</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <span className="text-[10px] font-bold bg-slate-50 text-slate-500 px-2 py-1 rounded-md border border-slate-100">
+                                                        {selectedRoom?.view || 'إطلالة مدينة'}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold bg-slate-50 text-slate-500 px-2 py-1 rounded-md border border-slate-100">
+                                                        {selectedRoom?.beds || 'أسرة ملكية'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="block text-secondary font-black text-base">{extraBedCount} أسرة</span>
-                                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">+{selectedRoom.extraBedPrice} ر.س / ليلة</span>
-                                        </div>
-                                    </div>
-                                ) : null}
 
-                                {/* Price Footer - Compact */}
-                                <div className="border-t border-slate-100 pt-8 mt-4 flex flex-col gap-6">
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex justify-between items-center text-slate-400 font-bold text-sm">
-                                            <span>سعر الغرفة ({nights} ليالي)</span>
-                                            <span className="text-secondary">{subtotal.toLocaleString()} ر.س</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-slate-400 font-bold text-sm">
-                                            <span>الرسوم والضرائب</span>
-                                            <span className="text-emerald-600">مشمولة</span>
-                                        </div>
-                                        <div className="h-px bg-slate-50 my-2" />
-                                        <div className="flex justify-between items-end">
+                                        {/* Guests Block */}
+                                        <div className="flex gap-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500 shrink-0">
+                                                <Users size={24} />
+                                            </div>
                                             <div>
-                                                <span className="block text-[10px] font-black text-gold uppercase tracking-[0.2em] mb-1">الإجمالي الشامل</span>
-                                                <span className="text-3xl font-black text-secondary tracking-tight">
-                                                    {totalPrice.toLocaleString()} <span className="text-sm">ر.س</span>
-                                                </span>
+                                                <span className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-1">الضيوف</span>
+                                                <h4 className="text-base font-black text-secondary mb-2">
+                                                    {searchData.adults || 2} بالغين
+                                                    {searchData.children > 0 && <span className="mx-1">و {searchData.children} أطفال</span>}
+                                                </h4>
+                                                <div className="text-[10px] font-bold bg-slate-50 text-slate-500 px-2 py-1 rounded-md border border-slate-100 inline-block">
+                                                    {roomCount} غرف
+                                                </div>
                                             </div>
-                                            <button
-                                                onClick={handleNext}
-                                                className="bg-secondary text-white px-10 py-4 rounded-2xl font-black text-base shadow-2xl shadow-secondary/20 hover:scale-[1.02] active:scale-[0.96] transition-all flex items-center gap-3 group"
-                                            >
-                                                <span>متابعة للبيانات</span>
-                                                <ArrowLeft size={20} className="group-hover:-translate-x-1.5 transition-transform" />
-                                            </button>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                        <ShieldCheck size={18} className="text-emerald-600" />
-                                        <span className="text-[10px] font-bold text-slate-500">نحن نضمن حماية بياناتك وأفضل الأسعار المتاحة للحجز المباشر.</span>
+                                    {/* 3. Extra Bed Row (Conditional) */}
+                                    {(selectedRoom?.allowExtraBed && extraBedCount > 0) && (
+                                        <div className="mb-8 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-white text-emerald-600 shadow-sm flex items-center justify-center">
+                                                    <BedDouble size={20} />
+                                                </div>
+                                                <div>
+                                                    <span className="block text-sm font-black text-secondary">سرير إضافي</span>
+                                                    <span className="text-[10px] font-bold text-slate-400">تمت الإضافة للغرفة</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="block font-black text-secondary">{extraBedCount}x</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 4. Invoice Section */}
+                                    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative overflow-hidden">
+                                        <div className="space-y-4 relative z-10">
+                                            {/* Line Item: Room Rate */}
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="font-bold text-slate-500">سعر الغرفة <span className="text-xs font-normal opacity-70">({nights} ليالي)</span></span>
+                                                <span className="font-black text-secondary">{((basePricePerNight * roomCount) * nights).toLocaleString()} ر.س</span>
+                                            </div>
+
+                                            {/* Line Item: Extra Bed */}
+                                            {extraBedCount > 0 && (
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="font-bold text-slate-500">
+                                                        سرير إضافي <span className="text-xs font-normal opacity-70">({extraBedCount}x)</span>
+                                                    </span>
+                                                    <span className={`font-black ${((selectedRoom?.extraBedPrice || 0) * extraBedCount * nights) > 0 ? "text-secondary" : "text-emerald-600"}`}>
+                                                        {((selectedRoom?.extraBedPrice || 0) * extraBedCount * nights) > 0
+                                                            ? `${((selectedRoom?.extraBedPrice || 0) * extraBedCount * nights).toLocaleString()} ر.س`
+                                                            : 'مجاني'
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* Line Item: Discount (if valid) */}
+                                            {isCouponApplied && couponDiscount > 0 && (
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="font-bold text-emerald-600 flex items-center gap-2">
+                                                        <Percent size={14} />
+                                                        خصم كوبون ({couponDiscount}%)
+                                                    </span>
+                                                    <span className="font-black text-emerald-600">- {discountValue.toLocaleString()} ر.س</span>
+                                                </div>
+                                            )}
+
+                                            {/* Line Item: Fees */}
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="font-bold text-slate-500">الرسوم والضرائب</span>
+                                                <span className="font-black text-emerald-600 text-xs bg-emerald-100/50 px-2 py-1 rounded-md">مشمولة</span>
+                                            </div>
+
+                                            {/* Divider */}
+                                            <div className="border-t border-dashed border-slate-300 my-4" />
+
+                                            {/* Total */}
+                                            <div className="flex justify-between items-end">
+                                                <div>
+                                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المجموع الكلي</span>
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="text-3xl font-black text-secondary tracking-tight">{totalPrice.toLocaleString()}</span>
+                                                        <span className="text-sm font-bold text-slate-500">ر.س</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Action Button Integrated */}
+                                                <button
+                                                    onClick={handleNext}
+                                                    className="bg-secondary hover:bg-gold text-white px-8 py-3 rounded-xl font-black text-sm shadow-xl shadow-secondary/10 hover:shadow-gold/20 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center gap-2"
+                                                >
+                                                    <span>تأكيد ومتابعة</span>
+                                                    <ArrowLeft size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Decorative Background Pattern */}
+                                        <div className="absolute top-0 right-0 p-4 opacity-[0.03]">
+                                            <img src="/assets/images/ui/logo-icon.png" className="w-32" alt="" />
+                                        </div>
+                                    </div>
+
+                                    {/* Security Note */}
+                                    <div className="flex items-center justify-center gap-2 mt-6 opacity-60">
+                                        <ShieldCheck size={14} className="text-slate-400" />
+                                        <span className="text-[10px] font-bold text-slate-400">حجز آمن وموثق 100%</span>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
+                            </div>                        </div>
                     )}
                     {/* Step 2: Customer Identity & Security Payment */}
                     {step === 2 && hotel && (
@@ -630,7 +739,7 @@ const BookingPage = () => {
                                     <div>
                                         <h4 className="font-black text-lg mb-1 tracking-tight">تأمين الحجز المتقدم</h4>
                                         <p className="text-slate-400 text-xs font-bold leading-relaxed">
-                                            بياناتك محمية بتشفير عالي المستوى وتتم معالجتها عبر بوابة <span className="text-white">PayTabs</span> المعتمدة عالمياً.
+                                            بياناتك محمية بتشفير عالي المستوى وتتم معالجتها عبر <span className="text-white">بوابات دفع عالمية</span> معتمدة ومؤمنة.
                                         </p>
                                     </div>
                                 </div>
@@ -661,56 +770,170 @@ const BookingPage = () => {
                                         </div>
                                     </div>
 
-                                    {/* Email Field */}
+                                    {/* Nationality Field */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">البريد الإلكتروني للإرسال التلقائي *</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">الجنسية *</label>
                                         <div className="relative group/field">
-                                            <input
-                                                type="email"
-                                                value={guestEmail}
-                                                onChange={(e) => setGuestEmail(e.target.value)}
-                                                autoComplete="off"
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-14 pr-6 py-4 text-secondary font-black focus:outline-none focus:border-gold focus:bg-white transition-all duration-300 placeholder:text-slate-300 text-left dir-ltr"
-                                                placeholder="name@example.com"
-                                            />
-                                            <Mail size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/field:text-gold transition-colors" />
+                                            <button
+                                                onClick={() => setIsNationalityDropdownOpen(!isNationalityDropdownOpen)}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-14 pr-6 py-4 text-secondary font-black focus:outline-none focus:border-gold focus:bg-white transition-all duration-300 text-right flex items-center justify-between"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    {nationality ? (
+                                                        <>
+                                                            <img
+                                                                src={COUNTRIES.find(c => c.name === nationality)?.flag}
+                                                                alt=""
+                                                                className="w-6 h-4 object-cover rounded shadow-sm"
+                                                            />
+                                                            <span>{nationality}</span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-slate-300">اختر الجنسية</span>
+                                                    )}
+                                                </div>
+                                                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isNationalityDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {isNationalityDropdownOpen && (
+                                                <>
+                                                    <div className="fixed inset-0 z-[1050]" onClick={() => setIsNationalityDropdownOpen(false)}></div>
+                                                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 z-[1051] overflow-hidden animate-fade-in">
+                                                        <div className="p-4 border-b border-slate-50 bg-slate-50/50 relative">
+                                                            <Search size={14} className="absolute left-7 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="ابحث عن الجنسية..."
+                                                                className="w-full bg-white rounded-xl pl-9 pr-4 py-2.5 text-xs font-black focus:outline-none focus:ring-2 focus:ring-gold/20 text-right text-secondary"
+                                                                value={nationalitySearch}
+                                                                onChange={(e) => setNationalitySearch(e.target.value)}
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                        <div className="max-h-64 overflow-y-auto custom-scrollbar p-2 text-right">
+                                                            {filteredNationalities.map((country) => (
+                                                                <button
+                                                                    key={country.code}
+                                                                    onClick={() => {
+                                                                        setNationality(country.name);
+                                                                        setIsNationalityDropdownOpen(false);
+                                                                        setNationalitySearch('');
+                                                                    }}
+                                                                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-xs transition-all duration-200 group/item ${nationality === country.name
+                                                                        ? 'bg-secondary text-white'
+                                                                        : 'text-slate-600 hover:bg-slate-50 text-right'
+                                                                        }`}
+                                                                >
+                                                                    <img src={country.flag} alt={country.code} className="w-5 h-3.5 object-cover rounded-sm shadow-sm" />
+                                                                    <span className="font-black">{country.name}</span>
+                                                                </button>
+                                                            ))}
+                                                            {filteredNationalities.length === 0 && (
+                                                                <div className="p-4 text-center text-slate-400 text-xs font-bold">
+                                                                    لم يتم العثور على نتائج
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                            <Globe size={18} className="absolute left-6 top-[22px] text-slate-300 group-focus-within/field:text-gold transition-colors z-20 pointer-events-none" />
                                         </div>
                                     </div>
 
-                                                                         {/* Password Field (only if NOT logged in) */}
-                                     {!isLoggedIn ? (
-                                         <div className="space-y-2 animate-fade-in">
-                                             <label className="text-[10px] font-black text-secondary uppercase tracking-widest mr-1 flex items-center gap-2">
-                                                 إنشاء كلمة مرور (سيتم إنشاء حساب لك تلقائياً عند الحجز) *
-                                                 <span className="text-[9px] text-indigo-600 lowercase bg-indigo-50 px-2 py-0.5 rounded-full font-bold">حساب جديد</span>
-                                             </label>
-                                             <div className="relative group/field">
-                                                 <input
-                                                     type="password"
-                                                     value={password}
-                                                     onChange={(e) => setPassword(e.target.value)}
-                                                     autoComplete="new-password"
-                                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-14 pr-6 py-4 text-secondary font-black focus:outline-none focus:border-gold focus:bg-white transition-all duration-300 placeholder:text-slate-300"
-                                                     placeholder="اختر كلمة مرور لحسابك"
-                                                 />
-                                                 <Lock size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/field:text-gold transition-colors" />
-                                             </div>
-                                         </div>
-                                     ) : (
-                                         <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 animate-fade-in">
-                                             <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-600">
-                                                 <ShieldCheck size={20} />
-                                             </div>
-                                             <div>
-                                                 <p className="text-[11px] font-black text-emerald-700">أنت مسجل دخولك بالفعل</p>
-                                                 <p className="text-[10px] font-bold text-emerald-600/70">سيتم ربط هذا الحجز بحسابك: {authUser?.email}</p>
-                                             </div>
-                                         </div>
-                                     )}
+                                    {/* Email Field - Hidden for Logged in Users */}
+                                    {!isLoggedIn && (
+                                        <div className="space-y-2 animate-fade-in">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">البريد الإلكتروني (لتسجيل حسابك في الموقع وحفظ حجوزاتك) *</label>
+                                            <div className="relative group/field">
+                                                <input
+                                                    type="email"
+                                                    value={guestEmail}
+                                                    onChange={(e) => setGuestEmail(e.target.value)}
+                                                    autoComplete="off"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-14 pr-6 py-4 text-secondary font-black focus:outline-none focus:border-gold focus:bg-white transition-all duration-300 placeholder:text-slate-300 text-left dir-ltr"
+                                                    placeholder="name@example.com"
+                                                />
+                                                <div className="absolute left-6 top-1/2 -translate-y-1/2">
+                                                    {isCheckingEmail ? (
+                                                        <Loader2 size={18} className="text-gold animate-spin" />
+                                                    ) : (
+                                                        <Mail size={18} className="text-slate-300 group-focus-within/field:text-gold transition-colors" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Linked Account Explanation - Show when email exists or logged in */}
+                                    {(isLoggedIn || emailExists) && (
+                                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 animate-fade-in mb-4">
+                                            <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-600">
+                                                <ShieldCheck size={20} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[11px] font-black text-emerald-700">
+                                                    {isLoggedIn ? 'أنت مسجل دخولك بالفعل' : 'هذا البريد مسجل مسبقاً'}
+                                                </p>
+                                                <p className="text-[10px] font-bold text-emerald-600/70">
+                                                    سيتم ربط هذا الحجز بحسابك المرتبط بـ: {isLoggedIn ? authUser?.email : guestEmail}
+                                                </p>
+                                            </div>
+
+                                            <button
+                                                onClick={async () => {
+                                                    if (isLoggedIn) {
+                                                        // 🔓 SILENT LOGOUT: Clear local state ONLY without redirecting away from booking
+                                                        try {
+                                                            await AuthAPI.logout(); // This clears the token & calls backend
+                                                        } catch (e) {
+                                                            TokenManager.remove(); // Fallback
+                                                        }
+                                                        // Update local contexts/states
+                                                        authLogout();
+                                                        setIsLoggedIn(false);
+                                                        setGuestEmail('');
+                                                        setGuestName('');
+                                                        setGuestPhone('');
+                                                        setEmailExists(false);
+                                                        setHasCheckedEmail(false);
+                                                    } else {
+                                                        setGuestEmail('');
+                                                        setEmailExists(false);
+                                                        setHasCheckedEmail(false);
+                                                    }
+                                                }}
+                                                className="shrink-0 text-[10px] font-black bg-white/50 text-emerald-700 px-3 py-2 rounded-xl border border-emerald-100/50 hover:bg-emerald-100 transition-all active:scale-95"
+                                            >
+                                                {isLoggedIn ? 'تسجيل الخروج' : 'تغيير البريد'}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Password Field - Only show for NEW users who are NOT logged in and AFTER check is complete */}
+                                    {(!isLoggedIn && hasCheckedEmail && !emailExists) && (
+                                        <div className="space-y-2 animate-fade-in mb-4">
+                                            <label className="text-[10px] font-black text-secondary uppercase tracking-widest mr-1 flex items-center gap-2">
+                                                إنشاء كلمة مرور (سيتم إنشاء حساب لك آلياً لتتمكن من الوصول إلى حجوزاتك) *
+                                                <span className="text-[9px] text-indigo-600 lowercase bg-indigo-50 px-2 py-0.5 rounded-full font-bold">حساب جديد</span>
+                                            </label>
+                                            <div className="relative group/field">
+                                                <input
+                                                    type="password"
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    autoComplete="new-password"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-14 pr-6 py-4 text-secondary font-black focus:outline-none focus:border-gold focus:bg-white transition-all duration-300 placeholder:text-slate-300"
+                                                    placeholder="اختر كلمة مرور قوية لحماية حسابك"
+                                                />
+                                                <Lock size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/field:text-gold transition-colors" />
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Phone Number Field */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">رقم الجوال للتواصل والدعم *</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">رقم الجوال (لإرسال الفوتشر والتواصل فوراً عبر الواتساب) *</label>
                                         <div className="flex gap-3" dir="ltr">
                                             <div className="relative shrink-0">
                                                 <button
@@ -869,7 +1092,7 @@ const BookingPage = () => {
                                                     />
                                                 </div>
                                             </div>
-                                            <span className="text-[9px] font-black text-slate-400 uppercase">الدفع عبر بوابة PayTabs الآمنة</span>
+                                            <span className="text-[9px] font-black text-slate-400 uppercase">الدفع عبر بوابات دفع دولية آمنة</span>
                                         </div>
                                     </div>
                                 </div>
@@ -916,7 +1139,7 @@ const BookingPage = () => {
                     )}
 
                 </div>
-            </div>
+            </div >
             <style>{`
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(10px); }

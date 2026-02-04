@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserPreferences } from '../contexts/UserPreferencesContext';
 import { HotelsAPI, Hotel } from '../services/api';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { Scale, ArrowRight, Star, MapPin, Eye, CheckCircle2, Shield, Wifi, Car, Waves, Dumbbell, Utensils, Plane, Sparkles, Bell, Gamepad2, Briefcase, Shirt, UserCheck, Coffee, Key, X } from 'lucide-react';
+import Navbar from '../features/ui/Navbar';
+import Footer from '../features/ui/Footer';
+import { formatHotelDistance } from '../utils/formatters';
+import { Scale, ArrowRight, Star, MapPin, Eye, CheckCircle2, Shield, Wifi, Car, Waves, Dumbbell, Utensils, Plane, Sparkles, Bell, Gamepad2, Briefcase, Shirt, UserCheck, Coffee, Key, X, Bus } from 'lucide-react';
 
 // Amenity mapping helper (sync with HotelCard)
 const getAmenityData = (id: string) => {
@@ -14,7 +15,7 @@ const getAmenityData = (id: string) => {
         'pool': { label: 'مسبح', icon: <Waves size={14} /> },
         'gym': { label: 'نادي رياضي', icon: <Dumbbell size={14} /> },
         'food': { label: 'مطعم', icon: <Utensils size={14} /> },
-        'shuttle': { label: 'نقل للحرم', icon: <Plane size={14} /> },
+        'shuttle': { label: 'نقل للحرم', icon: <Bus size={14} /> },
         'spa': { label: 'سبا', icon: <Sparkles size={14} /> },
         'room_service': { label: 'خدمة غرف', icon: <Bell size={14} /> },
         'kids_club': { label: 'نادي أطفال', icon: <Gamepad2 size={14} /> },
@@ -107,7 +108,7 @@ const CompareHotels: React.FC = () => {
             label: 'المسافة من الحرم', key: 'distance', render: (h: Hotel) => (
                 <div className="flex items-center gap-1 justify-center text-slate-600 font-bold">
                     <MapPin size={16} className="text-gold" />
-                    <span>{h.distanceFromHaram}</span>
+                    <span>{formatHotelDistance(h.distanceFromHaram, h.city)}</span>
                 </div>
             )
         },

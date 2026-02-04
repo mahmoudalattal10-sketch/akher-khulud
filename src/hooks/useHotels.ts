@@ -44,7 +44,8 @@ export function useHotels(options: UseHotelsOptions = {}): UseHotelsReturn {
         const response = await HotelsAPI.getAll();
 
         if (response.success && response.data) {
-            let filteredHotels = response.data;
+            let fetchedHotels = Array.isArray(response.data) ? response.data : [];
+            let filteredHotels = [...fetchedHotels];
 
             // Apply city filter
             if (city) {
@@ -71,9 +72,10 @@ export function useHotels(options: UseHotelsOptions = {}): UseHotelsReturn {
     }, [autoFetch, fetchHotels]);
 
     // Derived data for convenience
-    const makkahHotels = hotels.filter(h => h.city === 'makkah');
-    const madinahHotels = hotels.filter(h => h.city === 'madinah');
-    const featuredHotels = hotels.filter(h => h.isOffer);
+    const hotelsArray = Array.isArray(hotels) ? hotels : [];
+    const makkahHotels = hotelsArray.filter(h => h && h.city === 'makkah');
+    const madinahHotels = hotelsArray.filter(h => h && h.city === 'madinah');
+    const featuredHotels = hotelsArray.filter(h => h && h.isOffer);
 
     return {
         hotels,

@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import Hero from '../components/Hero';
-import MapSection from '../components/MapSection';
-import HotelCard from '../components/HotelCard';
+import Hero from '../features/search/components/Hero';
+import MapSection from '../features/hotels/components/MapSection';
+import HotelCard from '../features/hotels/components/HotelCard';
 import { HotelsAPI, Hotel } from '../services/api';
 
 const Home: React.FC = () => {
@@ -128,8 +128,8 @@ const Home: React.FC = () => {
               <div className="w-16 h-[2px] bg-gold/50"></div>
             </div>
             <h2 className="text-4xl md:text-7xl font-black text-secondary tracking-tighter leading-tight">
-              نصنع من الضيافة <br />
-              <span className="text-gold">قصصاً تُحكى</span>
+              اكتشف آفاق الفخامة في <br />
+              <span className="text-gold">أفضل الوجهات المختارة بعناية</span>
             </h2>
             <p className="text-slate-400 text-lg md:text-2xl font-bold max-w-4xl leading-relaxed mt-8">
               ارتقِ بتجربتك إلى آفاق غير مسبوقة، حيث نجمع بين عبق التاريخ وأعلى معايير الرفاهية العالمية. ضيافة خلود.. بوابتكم لعالم متميز من الراحة والروحانية.
@@ -153,7 +153,7 @@ const Home: React.FC = () => {
               {/* تفاصيل الوجهة (تظهر عند السكرول أو الهوفر) */}
               <div className="absolute inset-0 p-8 md:p-16 flex flex-col justify-end text-right">
                 <div className="flex items-center gap-3 mb-4 opacity-0 translate-y-4 group-[.active-card]:opacity-100 group-[.active-card]:translate-y-0 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-700">
-                  <div className="w-2 h-2 bg-slate-700 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-gold rounded-full animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.8)]"></div>
                   <span className="text-white font-bold text-xs md:text-sm tracking-widest uppercase">{makkahCount}+ فندق متاح الآن</span>
                 </div>
 
@@ -188,7 +188,7 @@ const Home: React.FC = () => {
               {/* تفاصيل الوجهة */}
               <div className="absolute inset-0 p-8 md:p-16 flex flex-col justify-end text-right">
                 <div className="flex items-center gap-3 mb-4 opacity-0 translate-y-4 group-[.active-card]:opacity-100 group-[.active-card]:translate-y-0 md:group-hover:opacity-100 md:group-hover:translate-y-0 transition-all duration-700">
-                  <div className="w-2 h-2 bg-gold rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-[#059669] rounded-full animate-pulse shadow-[0_0_15px_rgba(5,150,105,0.8)]"></div>
                   <span className="text-white font-bold text-xs md:text-sm tracking-widest uppercase">{madinahCount}+ فندق متاح الآن</span>
                 </div>
 
@@ -219,7 +219,7 @@ const Home: React.FC = () => {
               <div className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse"></div>
               <span className="text-gold font-black text-[10px] uppercase tracking-[0.3em]">Immersive Hospitality Atlas</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-text tracking-tighter leading-tight">استكشف رفاهية بلا حدود.. <span className="text-gold">أطلس الوجهات الذكي</span></h2>
+            <h2 className="text-3xl md:text-5xl font-black text-text tracking-tighter leading-tight">استكشف فنادقنا.. <span className="text-gold">بوابتك لعالم من التميز</span></h2>
           </div>
         </div>
 
@@ -324,12 +324,13 @@ const Home: React.FC = () => {
             {/* Filter Logic */}
             {useMemo(() => {
               return mapHotels
-                .filter(h => activeCityTab === 'all' ||
-                  (activeCityTab === 'makkah' && (h.city === 'makkah' || h.city === 'مكة المكرمة')) ||
-                  (activeCityTab === 'madinah' && (h.city === 'madinah' || h.city === 'المدينة المنورة'))
+                .filter(h =>
+                  h.isFeatured === true && // [STRICT] Only featured hotels
+                  (activeCityTab === 'all' ||
+                    (activeCityTab === 'makkah' && (h.city === 'makkah' || h.city === 'مكة المكرمة')) ||
+                    (activeCityTab === 'madinah' && (h.city === 'madinah' || h.city === 'المدينة المنورة')))
                 )
-                // Sort: Featured first, then rating
-                .sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0) || b.rating - a.rating)
+                .sort((a, b) => b.rating - a.rating) // Sort by rating since all are featured
                 .slice(0, 10); // Limit to top 10 relevant
             }, [mapHotels, activeCityTab])
               .map((hotel: any, index: number) => (

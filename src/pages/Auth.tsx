@@ -52,7 +52,10 @@ const Auth = () => {
                     login(response.data.token, response.data.user);
                     navigate('/');
                 } else {
-                    setMessage(response.error || 'فشل تسجيل الدخول: البريد الإلكتروني أو كلمة المرور غير صحيحة');
+                    const errorMsg = response.error === 'EMAIL_NOT_FOUND'
+                        ? 'البريد الإلكتروني غير مسجل'
+                        : (response.error === 'INCORRECT_PASSWORD' ? 'كلمة المرور غير صحيحة' : 'حدث خطأ في تسجيل الدخول');
+                    setMessage(errorMsg);
                 }
             } else {
                 const response = await AuthAPI.register({
@@ -82,7 +85,7 @@ const Auth = () => {
         <div className="min-h-screen pt-24 pb-12 flex items-center justify-center px-4 font-cairo bg-gradient-to-br from-slate-50 to-slate-100">
             {/* Success/Error Message */}
             {message && (
-                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-gold-50 text-gold px-6 py-3 rounded-full shadow-lg border border-gold-100 font-bold flex items-center gap-2">
+                <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50 bg-gold-50 text-gold px-6 py-3 rounded-full shadow-lg border border-gold-100 font-bold flex items-center gap-2 animate-bounce-in">
                     <Check size={18} />
                     {message}
                 </div>
@@ -242,16 +245,14 @@ const Auth = () => {
                                         <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
                                         تذكرني
                                     </label>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsForgotPassword(true);
-                                            setMessage(null);
-                                        }}
+                                    <a
+                                        href={`https://wa.me/966553882445?text=${encodeURIComponent(`السلام عليكم، أرغب في استعادة كلمة المرور لحسابي المسجل ببريد: ${email}`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="text-gold hover:text-gold-dark transition-colors"
                                     >
                                         نسيت كلمة المرور؟
-                                    </button>
+                                    </a>
                                 </div>
                             )}
 

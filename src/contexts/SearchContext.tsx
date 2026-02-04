@@ -12,6 +12,7 @@ export interface SearchData {
     destination: string;
     promoCode: string;
     couponDiscount?: number; // <--- Added: Validated discount percentage
+    extraBeds?: number; // Added for booking flow
     hasSearched: boolean; // Track if user has initiated a search
 }
 
@@ -35,6 +36,7 @@ const emptySearchData: SearchData = {
     destination: '',
     promoCode: '',
     couponDiscount: 0,
+    extraBeds: 0,
     hasSearched: false
 };
 
@@ -134,7 +136,13 @@ export const formatDateArabic = (dateInput: Date | string | null | undefined): s
 
     let date: Date;
     if (typeof dateInput === 'string') {
-        date = new Date(dateInput);
+        // If it's a simple date string (YYYY-MM-DD), parse it as local to avoid offset
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+            const [year, month, day] = dateInput.split('-').map(Number);
+            date = new Date(year, month - 1, day);
+        } else {
+            date = new Date(dateInput);
+        }
     } else {
         date = dateInput;
     }
@@ -143,6 +151,31 @@ export const formatDateArabic = (dateInput: Date | string | null | undefined): s
 
     const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
     return `${date.getDate()} ${months[date.getMonth()]}`;
+};
+
+// ✨ New: Helper to format date as YYYY-MM-DD without any timezone shifts
+export const formatDateISO = (date: Date | null | undefined): string => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+// ✨ New: Helper to safely parse strings or dates and return a consistent Date object
+export const parseDateSafe = (dateInput: Date | string | null | undefined): Date | null => {
+    if (!dateInput) return null;
+    if (dateInput instanceof Date) return dateInput;
+
+    if (typeof dateInput === 'string') {
+        const isoMatch = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const [, year, month, day] = isoMatch.map(Number);
+            return new Date(year, month - 1, day); // Returns local midnight
+        }
+        return new Date(dateInput);
+    }
+    return null;
 };
 
 export default SearchContext;

@@ -16,17 +16,30 @@
         frame-src 'self' https://accounts.google.com https://*.paytabs.sa https://*.paytabs.com;
     ">
     <title>Diafat Khulud - ضيافة خلود</title>
-    <!-- 🔠 Cairo Font -->
+    <!-- 🚀 Performance Optimizations -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    
+    <!-- Preload Cairo Font for LCP improvement -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" as="style">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    
     <style>
+        /* ⚡ Font display swap to prevent invisible text */
+        @font-face {
+            font-family: 'Cairo';
+            font-display: swap;
+        }
         * {
             font-family: 'Cairo', sans-serif !important;
         }
     </style>
-  <script type="module" crossorigin src="/assets/index-BnuycFB_.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DDfkLtjv.css">
+  <script type="module" crossorigin src="/assets/index-DmENlvps.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-react-DKBRiY3W.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-utils-BTxUMNdh.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-CTTQo8wL.css">
 </head>
 
 <body>

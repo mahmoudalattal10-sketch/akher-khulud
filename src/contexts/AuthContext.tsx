@@ -19,32 +19,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const initAuth = async () => {
             try {
-                const token = TokenManager.get();
+                // Determine context based on URL
+                const isAdminPath = window.location.pathname.startsWith('/admin');
+                const tokenType = isAdminPath ? 'ADMIN' : 'USER';
+
+                const token = TokenManager.get(tokenType);
                 if (token) {
                     try {
                         const response = await AuthAPI.verify();
-                        if (response.success && response.data?.user) {
-                            // The verify endpoint returns a simplified user object (from token)
-                            // Let's fetch the full profile to get the name/role correctly if needed,
-                            // or just trust the token data if it's sufficient.
-                            // For now, let's use the verify data, but cast it to User. 
-                            // Ideally verify should return the full user or we call profile().
 
-                            // Let's fetch full profile to be safe and get fresh data
+                        // Note: Authentication works because TokenManager.getAuthHeader() can be 
+                        // context-aware or we rely on the specific endpoint checks. 
+                        // For /verify endpoint, it expects ANY valid token.
+
+                        if (response.success && response.data?.user) {
                             const profileRes = await AuthAPI.profile();
                             if (profileRes.success && profileRes.data?.user) {
                                 setUser(profileRes.data.user);
                             } else {
-                                // Verify succeeded but profile failed? Fallback to token data
-                                // or layout might be undefined
                                 setUser(response.data.user as unknown as User);
                             }
                         } else {
-                            TokenManager.remove();
+                            TokenManager.remove(tokenType);
                         }
                     } catch (e) {
                         console.error("Token verification failed", e);
-                        TokenManager.remove();
+                        TokenManager.remove(tokenType);
                     }
                 }
             } catch (error) {
@@ -58,12 +58,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const login = (token: string, newUser: User) => {
-        TokenManager.set(token);
+        // Determine token type based on User Role to ensure correct storage
+        const type = (newUser.role === 'ADMIN' || newUser.role === 'SUPER_ADMIN') ? 'ADMIN' : 'USER';
+        TokenManager.set(token, type);
         setUser(newUser);
     };
 
     const logout = async () => {
-        await AuthAPI.logout();
+        try {
+            await AuthAPI.logout();
+        } catch (e) {
+            console.error("Logout API failed", e);
+        }
+
+        // Remove token based on current user role
+        if (user) {
+            const type = (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') ? 'ADMIN' : 'USER';
+            TokenManager.remove(type);
+        } else {
+            // Fallback: Remove based on current path
+            const isAdminPath = window.location.pathname.startsWith('/admin');
+            TokenManager.remove(isAdminPath ? 'ADMIN' : 'USER');
+        }
         setUser(null);
     };
 

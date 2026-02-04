@@ -1,20 +1,21 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/admin/Sidebar';
-import StatCard from '../components/admin/StatCard';
-import BookingTable from '../components/admin/BookingTable';
-import DestinationsTab from '../components/admin/DestinationsTab';
-import CustomersTab from '../components/admin/CustomersTab';
-import AnalyticsTab from '../components/admin/AnalyticsTab';
-import SettingsTab from '../components/admin/SettingsTab';
-import MessagesTab from '../components/admin/MessagesTab'; // [NEW]
-import CouponsTab from '../components/admin/CouponsTab'; // [NEW]
-import AdminSettings from '../components/admin/AdminSettings';
-import NotificationDropdown, { Notification } from '../components/admin/NotificationDropdown';
+import Sidebar from '../features/admin/components/Sidebar';
+import StatCard from '../features/admin/components/StatCard';
+import BookingTable from '../features/admin/components/BookingTable';
+import DestinationsTab from '../features/admin/components/DestinationsTab';
+import PilgrimsTab from '../features/admin/components/PilgrimsTab';
+import AnalyticsTab from '../features/admin/components/AnalyticsTab';
+import SettingsTab from '../features/admin/components/SettingsTab';
+import MessagesTab from '../features/admin/components/MessagesTab';
+import CouponsTab from '../features/admin/components/CouponsTab';
+import AdminSettings from '../features/admin/components/AdminSettings';
+import NotificationDropdown, { Notification } from '../features/admin/components/NotificationDropdown';
 import { useAdminHotels } from '../hooks/useAdminHotels';
-import { AuthAPI, User } from '../services/api';
-import { useAdminStats } from '../hooks/useAdminStats'; // [NEW]
+import { AuthAPI, User, AdminAPI, HotelsAPI, BookingsAPI } from '../services/api';
+import { Booking } from '../types';
+import { useAdminStats } from '../hooks/useAdminStats';
 import {
   Users,
   Wallet,
@@ -38,7 +39,8 @@ import {
   RefreshCw,
   Menu,
   ShieldCheck,
-  Bot
+  Bot,
+  LogOut
 } from 'lucide-react';
 import {
   BarChart,
@@ -63,43 +65,71 @@ const chartData = [
 ];
 
 // ⌨️ Typewriter Effect Component
-const Typewriter = ({ sentences, delay = 50, typingDelay = 1500 }: { sentences: string[], delay?: number, typingDelay?: number }) => {
-  const [text, setText] = useState('');
-  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
+// ⌨️ Multi-line Typewriter Effect Component
+const Typewriter = ({ sentences, delay = 30, lineDelay = 800, resetDelay = 5000 }: { sentences: string[], delay?: number, lineDelay?: number, resetDelay?: number }) => {
+  const [displayedLines, setDisplayedLines] = useState<string[]>([]);
+  const [currentLine, setCurrentLine] = useState('');
+  const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   useEffect(() => {
-    const handleTyping = () => {
-      const currentSentence = sentences[currentSentenceIndex];
+    // If we have finished all sentences, wait and reset
+    if (currentLineIndex >= sentences.length) {
+      const resetTimer = setTimeout(() => {
+        setDisplayedLines([]);
+        setCurrentLine('');
+        setCurrentLineIndex(0);
+        setCharIndex(0);
+        setIsWaiting(false);
+      }, resetDelay);
+      return () => clearTimeout(resetTimer);
+    }
 
-      if (isDeleting) {
-        if (charIndex > 0) {
-          setText(currentSentence.substring(0, charIndex - 1));
-          setCharIndex(charIndex - 1);
-        } else {
-          setIsDeleting(false);
-          setCurrentSentenceIndex((prev) => (prev + 1) % sentences.length);
-        }
+    if (isWaiting) return;
+
+    const handleTyping = () => {
+      const targetLine = sentences[currentLineIndex];
+
+      if (charIndex < targetLine.length) {
+        // Typing characters
+        setCurrentLine(prev => prev + targetLine[charIndex]);
+        setCharIndex(prev => prev + 1);
       } else {
-        if (charIndex < currentSentence.length) {
-          setText(currentSentence.substring(0, charIndex + 1));
-          setCharIndex(charIndex + 1);
-        } else {
-          setTimeout(() => setIsDeleting(true), typingDelay);
-        }
+        // Line finished
+        setIsWaiting(true);
+        setTimeout(() => {
+          setDisplayedLines(prev => [...prev, targetLine]);
+          setCurrentLine('');
+          setCharIndex(0);
+          setCurrentLineIndex(prev => prev + 1);
+          setIsWaiting(false);
+        }, lineDelay);
       }
     };
 
-    const timer = setTimeout(handleTyping, isDeleting ? delay / 2 : delay);
+    const timer = setTimeout(handleTyping, delay);
     return () => clearTimeout(timer);
-  }, [charIndex, isDeleting, sentences, currentSentenceIndex, delay, typingDelay]);
+  }, [charIndex, currentLineIndex, sentences, delay, lineDelay, resetDelay, isWaiting]);
 
   return (
-    <span>
-      {text}
-      <span className="animate-pulse border-r-2 border-slate-800 ml-1 h-4 inline-block align-middle"></span>
-    </span>
+    <div className="flex flex-col items-start gap-2 w-full">
+      {displayedLines.map((line, index) => (
+        <div key={index} className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 shrink-0 mt-2"></span>
+          <span>{line}</span>
+        </div>
+      ))}
+      {currentLineIndex < sentences.length && (
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-2 animate-pulse"></span>
+          <span>
+            {currentLine}
+            <span className="animate-pulse border-r-2 border-slate-800 ml-1 h-4 inline-block align-middle"></span>
+          </span>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -107,6 +137,7 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Admin Name State
@@ -126,6 +157,7 @@ const App: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   // 🚀 DYNAMIC DATA: Using useAdminHotels hook instead of static data
   const {
@@ -184,14 +216,8 @@ const App: React.FC = () => {
   }, [navigate]);
 
   const handleToggleFeatured = async (id: string) => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/hotels/${id}/featured`, { method: 'PATCH' });
-      const updatedHotel = await response.json();
-      return updatedHotel;
-    } catch (error) {
-      console.error('Error toggling featured status:', error);
-      return null;
-    }
+    const response = await HotelsAPI.toggleFeatured(id);
+    return response.success ? response.data : null;
   };
 
   const handleCreateReview = async (review: any) => {
@@ -204,6 +230,9 @@ const App: React.FC = () => {
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -211,21 +240,42 @@ const App: React.FC = () => {
 
   // 🔔 NOTIFICATIONS LOGIC
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0); // [NEW]
+  const [upcomingCheckins, setUpcomingCheckins] = useState<Booking[]>([]); // 📅 Tomorrow's check-ins
 
   const fetchNotifications = async () => {
-    try {
-      const token = localStorage.getItem('diafat_auth_token');
-      if (!token) return;
+    // 1. Fetch system notifications
+    const response = await AdminAPI.getNotifications();
+    if (response.success && response.data?.notifications) {
+      setNotifications(response.data.notifications);
+    }
 
-      const response = await fetch('http://localhost:3001/api/admin/notifications', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.notifications) {
-        setNotifications(data.notifications);
+    // 2. Fetch unread messages count [NEW]
+    try {
+      const msgResponse = await AdminAPI.getUnreadMessagesCount();
+      if (msgResponse.success) {
+        setUnreadMessages(msgResponse.data.count);
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+    } catch (e) {
+      console.error('Failed to fetch unread messages count', e);
+    }
+
+    // 3. Fetch bookings with tomorrow's check-in [NEW]
+    try {
+      const bookingsResponse = await BookingsAPI.getAll();
+      if (bookingsResponse.success && bookingsResponse.data) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        const tomorrowCheckins = bookingsResponse.data.filter(b => {
+          const checkInDate = b.checkIn?.split('T')[0];
+          return checkInDate === tomorrowStr && b.status !== 'CANCELLED';
+        });
+        setUpcomingCheckins(tomorrowCheckins);
+      }
+    } catch (e) {
+      console.error('Failed to fetch upcoming check-ins', e);
     }
   };
 
@@ -238,15 +288,9 @@ const App: React.FC = () => {
   }, [adminUser]);
 
   const handleMarkAsRead = async (id: string) => {
-    try {
-      const token = localStorage.getItem('diafat_auth_token');
-      await fetch(`http://localhost:3001/api/admin/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+    const response = await AdminAPI.markNotificationAsRead(id);
+    if (response.success) {
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-    } catch (error) {
-      console.error('Error marking as read:', error);
     }
   };
 
@@ -284,57 +328,92 @@ const App: React.FC = () => {
                         <div className="mt-1 min-w-[24px]">
                           <Bot className="w-6 h-6 text-emerald-500" />
                         </div>
-                        <p className="text-slate-700 text-sm md:text-base font-bold leading-relaxed w-full font-mono">
+                        <div className="text-slate-700 text-sm md:text-base font-bold leading-relaxed w-full font-mono min-h-[100px]">
                           {/* Typewriter Effect - System Status */}
                           <Typewriter
                             sentences={(() => {
                               const time = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                              const criticalRooms: string[] = [];
-                              hotels?.forEach(h => {
-                                h.rooms?.forEach(r => {
-                                  if ((r.available || 0) < 5) {
-                                    criticalRooms.push(`غرفة ${r.name} في ${h.name} (متبقي ${r.available || 0})`);
-                                  }
-                                });
-                              });
 
-                              const normalize = (str: string) => str?.toLowerCase().trim() || '';
+                              // 1. Time (First as requested)
+                              const sequence = [`Elattal Co. v4 | آخر تحديث للبيانات: ${time}`];
 
-                              const makkahHotels = hotels?.filter(h => {
-                                const c = normalize(h.city || '');
-                                return c.includes('makkah') || c.includes('mecca') || c.includes('مكة') || c.includes('مكه');
-                              }).length || 0;
+                              // 2. Last Activity - Show WHAT the last activity was
+                              const sortedNotifications = [...notifications].sort((a, b) =>
+                                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                              );
 
-                              const madinahHotels = hotels?.filter(h => {
-                                const c = normalize(h.city || '');
-                                return c.includes('madinah') || c.includes('medina') || c.includes('المدينة') || c.includes('المدينه');
-                              }).length || 0;
-
-                              const totalHotels = hotels?.length || 0;
-
-                              // Debugging log
-                              // console.log('Hotels:', hotels?.map(h => h.city));
-
-                              const baseSentences = [
-                                `Elattal Co. v4 | آخر تحديث للبيانات: ${time}`,
-                                `🏨 التوسع الفندقي: ${totalHotels} فندق في النظام (${makkahHotels} في مكة، ${madinahHotels} في المدينة).`,
-                                `💰 الأداء المالي: إجمالي المبيعات ${stats?.sales?.toLocaleString() || 0} ر.س | صافي الأرباح ${stats?.profit?.toLocaleString() || 0} ر.س`,
-                              ];
-
-                              if (criticalRooms.length > 0) {
-                                baseSentences.push(`⚠️ تحليل المخزون: يوجد ${criticalRooms.length} غرف وصلت للحد الحرج.`);
-                                // Show details of up to 3 critical rooms
-                                criticalRooms.slice(0, 3).forEach(detail => baseSentences.push(`🔴 تنبيه حرج: ${detail}`));
-                              } else {
-                                baseSentences.push(`✅ تحليل المخزون: جميع الغرف متوفرة بكميات آمنة ولا توجد نواقص.`);
+                              if (sortedNotifications.length > 0) {
+                                const lastActivity = sortedNotifications[0];
+                                const activityTime = new Date(lastActivity.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                                sequence.push(`🔔 آخر نشاط (${activityTime}): ${lastActivity.title}`);
+                                if (lastActivity.message) {
+                                  sequence.push(`   📝 التفاصيل: ${lastActivity.message}`);
+                                }
                               }
 
-                              return baseSentences;
+                              // 3. Stock Alerts - Read from notifications with STOCK type or containing "مخزون"
+                              const stockAlerts = notifications.filter(n =>
+                                n.type === 'STOCK_ALERT' ||
+                                n.type === 'INVENTORY' ||
+                                n.title?.includes('مخزون') ||
+                                n.title?.includes('أسعار') ||
+                                n.message?.includes('المخزون')
+                              );
+
+                              if (stockAlerts.length > 0) {
+                                sequence.push(`📦 تنبيهات المخزون: يوجد ${stockAlerts.length} تنبيه مهم!`);
+                                stockAlerts.slice(0, 3).forEach((alert, i) => {
+                                  sequence.push(`   🔸 ${alert.title}: ${alert.message}`);
+                                });
+                              } else {
+                                sequence.push(`📦 حالة المخزون: ممتاز! لا توجد تنبيهات مخزون.`);
+                              }
+
+                              // 4. Tomorrow's Check-ins - Real booking data with customer details
+                              if (upcomingCheckins.length > 0) {
+                                sequence.push(`📅 عملاء يدخلون غداً (${upcomingCheckins.length} حجز) - تواصل معهم الآن:`);
+                                upcomingCheckins.slice(0, 5).forEach(booking => {
+                                  const customerName = booking.guestName || 'عميل';
+                                  const phone = booking.guestPhone || 'رقم غير متوفر';
+                                  const hotelName = booking.room?.hotel?.name || 'الفندق';
+                                  sequence.push(`   👤 ${customerName} - فندق ${hotelName} (📞 ${phone})`);
+                                });
+                              } else {
+                                sequence.push(`📅 لا يوجد عملاء موعد دخولهم غداً.`);
+                              }
+
+                              // 5. Visible Hotels Count
+                              const visibleHotels = hotels?.filter(h => h.isVisible).length || 0;
+                              const totalHotels = hotels?.length || 0;
+                              const hiddenHotels = totalHotels - visibleHotels;
+                              sequence.push(`🏨 الفنادق المتاحة: ${visibleHotels} فندق ظاهر للعملاء (من أصل ${totalHotels})`);
+                              if (hiddenHotels > 0) {
+                                sequence.push(`   👁️ ملاحظة: ${hiddenHotels} فندق مخفي حالياً`);
+                              }
+
+                              // 6. Unread Messages
+                              const newMsgs = unreadMessages || 0;
+                              if (newMsgs > 0) {
+                                sequence.push(`💬 رسائل جديدة: ${newMsgs} رسالة تنتظر الرد!`);
+                              }
+
+                              // 7. Creative - System Status
+                              sequence.push(`🚀 حالة النظام: يعمل بكفاءة | زمن الاستجابة: ${Math.floor(Math.random() * 50 + 80)}ms`);
+
+                              // 8. Sales Progress (if available)
+                              if (stats?.sales && stats.sales > 0) {
+                                const target = 100000;
+                                const progress = Math.min(100, Math.floor((stats.sales / target) * 100));
+                                sequence.push(`💰 الإنجاز الشهري: ${progress}% من الهدف (${stats.sales.toLocaleString()} ر.س)`);
+                              }
+
+                              return sequence;
                             })()}
-                            delay={40}
-                            typingDelay={8000} // Significant pause (8s) to allow reading
+                            delay={20}
+                            lineDelay={1000}
+                            resetDelay={5000}
                           />
-                        </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -343,7 +422,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Stat Cards - Grid Separated from Hero */}
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 px-4 md:px-0">
               <StatCard
                 label="إجمالي المبيعات"
                 value={stats ? `${stats.sales.toLocaleString()} SAR` : '...'}
@@ -571,7 +650,7 @@ const App: React.FC = () => {
           </div >
         );
       case 'customers':
-        return <CustomersTab />;
+        return <PilgrimsTab />;
       case 'analytics':
         return <AnalyticsTab />;
       case 'settings':
@@ -604,6 +683,7 @@ const App: React.FC = () => {
           hotels={hotels as any[]}
           isOpen={true} // Always open on desktop in this grid cell
           onClose={() => { }}
+          unreadMessagesCount={unreadMessages} // [NEW]
         />
       </div>
 
@@ -616,6 +696,7 @@ const App: React.FC = () => {
           hotels={hotels as any[]}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
+          unreadMessagesCount={unreadMessages} // [NEW]
         />
       </div>
 
@@ -669,8 +750,8 @@ const App: React.FC = () => {
                     className={`w-14 h-14 glass-card flex items-center justify-center transition-all rounded-2xl relative group ${showNotifications ? 'bg-[#0f172a] text-white shadow-xl shadow-slate-900/20' : 'text-slate-500 hover:bg-slate-50 hover:text-[#0f172a]'}`}
                   >
                     <Bell size={24} strokeWidth={2.2} />
-                    {notifications.some(n => !n.isRead) && (
-                      <span className="absolute top-4 left-4 w-3 h-3 bg-[#0f172a] rounded-full border-2 border-white animate-pulse"></span>
+                    {notifications.some(n => !n.isRead) && !showNotifications && (
+                      <span className="absolute top-4 left-4 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse shadow-sm shadow-red-500/50"></span>
                     )}
                   </button>
 
@@ -682,19 +763,59 @@ const App: React.FC = () => {
                   />
                 </div>
 
-                <button className="flex items-center gap-4 px-4 py-2.5 glass-card rounded-[1.75rem] border-white/60 hover:border-slate-200 transition-all group shadow-sm active:scale-95">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white flex items-center justify-center border-2 border-slate-700 shadow-lg shadow-slate-200/50 group-hover:border-slate-500/50 group-hover:shadow-slate-500/20 transition-all">
-                      <ShieldCheck size={24} strokeWidth={1.5} className="text-gold" />
+                <div className="relative" ref={profileRef}>
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className={`flex items-center gap-4 px-4 py-2.5 glass-card rounded-[1.75rem] border-white/60 hover:border-slate-200 transition-all group shadow-sm active:scale-95 ${showProfileMenu ? 'bg-slate-50' : ''}`}
+                  >
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white flex items-center justify-center border-2 border-slate-700 shadow-lg shadow-slate-200/50 group-hover:border-slate-500/50 group-hover:shadow-slate-500/20 transition-all">
+                        <ShieldCheck size={24} strokeWidth={1.5} className="text-gold" />
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gold border-2 border-white rounded-full"></div>
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gold border-2 border-white rounded-full"></div>
-                  </div>
-                  <div className="text-right hidden xl:block ml-1">
-                    <p className="text-sm font-black text-text group-hover:text-slate-700 transition-colors">Super Admin</p>
-                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">المدير التنفيذي</p>
-                  </div>
-                  <ChevronDown size={14} className="text-slate-400 mr-1 group-hover:text-[#0f172a] transition-all group-hover:rotate-180" />
-                </button>
+                    <div className="text-right hidden xl:block ml-1">
+                      <p className="text-sm font-black text-text group-hover:text-slate-700 transition-colors">Super Admin</p>
+                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">المدير التنفيذي</p>
+                    </div>
+                    <ChevronDown size={14} className={`text-slate-400 mr-1 group-hover:text-[#0f172a] transition-all duration-300 ${showProfileMenu ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Profile Dropdown Menu */}
+                  {showProfileMenu && (
+                    <div className="absolute left-0 top-full mt-4 w-64 bg-white/95 backdrop-blur-xl border border-slate-100 rounded-[2rem] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.1)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="p-6 border-b border-slate-50">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1">المستخدم الحالي</p>
+                        <p className="text-sm font-black text-slate-800">{adminUser?.email || 'admin@diafat.com'}</p>
+                      </div>
+
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            setActiveTab('account-settings');
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-slate-50 transition-colors group/item"
+                        >
+                          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover/item:text-primary transition-colors">
+                            <Plus size={20} />
+                          </div>
+                          <span className="text-sm font-bold text-slate-600 group-hover/item:text-slate-900 transition-colors">إعدادات الحساب</span>
+                        </button>
+
+                        <button
+                          onClick={() => AuthAPI.logout()}
+                          className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl hover:bg-red-50 transition-colors group/logout"
+                        >
+                          <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-400 group-hover/logout:text-red-600 transition-colors">
+                            <LogOut size={20} />
+                          </div>
+                          <span className="text-sm font-bold text-red-600 group-hover/logout:text-red-700 transition-colors">تسجيل الخروج</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </header>

@@ -45,8 +45,8 @@ export const useHotelDetails = (idOrSlug: string | undefined, queryParams?: { ch
 
         // Prepare API params
         const apiParams: Parameters<typeof HotelsAPI.getBySlug>[1] = {};
-        if (queryParams?.checkIn) apiParams.checkIn = queryParams.checkIn.toISOString();
-        if (queryParams?.checkOut) apiParams.checkOut = queryParams.checkOut.toISOString();
+        if (queryParams?.checkIn) apiParams.checkIn = queryParams.checkIn.toLocaleDateString('en-CA');
+        if (queryParams?.checkOut) apiParams.checkOut = queryParams.checkOut.toLocaleDateString('en-CA');
         if (queryParams?.guests) apiParams.guests = queryParams.guests;
 
         try {

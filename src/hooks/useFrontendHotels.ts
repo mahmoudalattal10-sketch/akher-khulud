@@ -70,10 +70,12 @@ const DEFAULT_SORT: SortOption = {
 };
 
 // Helper to parse distance string "150 متر" -> 150
-const parseDistance = (distStr?: string | null): number => {
-    if (!distStr) return 9999;
-    if (distStr.includes('صف أول') || distStr.includes('مباشر')) return 0;
-    const match = distStr.match(/(\d+)/);
+const parseDistance = (distStr?: string | number | null): number => {
+    if (distStr === null || distStr === undefined) return 9999;
+    const str = String(distStr);
+    if (!str.trim()) return 9999;
+    if (str.includes('صف أول') || str.includes('مباشر')) return 0;
+    const match = str.match(/(\d+)/);
     return match ? parseInt(match[0]) : 9999;
 };
 
@@ -101,16 +103,29 @@ export const useFrontendHotels = (
             // Prepare API params
             const apiParams: Parameters<typeof HotelsAPI.getAll>[0] = {};
             if (initialCity && initialCity !== 'all') apiParams.city = initialCity;
-            if (searchParams?.checkIn) apiParams.checkIn = searchParams.checkIn;
-            if (searchParams?.checkOut) apiParams.checkOut = searchParams.checkOut;
+            if (searchParams?.checkIn) {
+                const ci = new Date(searchParams.checkIn);
+                apiParams.checkIn = ci.toLocaleDateString('en-CA');
+            }
+            if (searchParams?.checkOut) {
+                const co = new Date(searchParams.checkOut);
+                apiParams.checkOut = co.toLocaleDateString('en-CA');
+            }
             if (searchParams?.guests) apiParams.guests = searchParams.guests;
 
             const response = await HotelsAPI.getAll(apiParams);
 
-            if (response.success && response.data) {
+            if (response.success && Array.isArray(response.data)) {
                 setHotels(response.data);
+            } else if (response.success && response.data) {
+                // If it's a single object or wrapped, handle it
+                setHotels(Array.isArray(response.data) ? response.data : []);
+                if (!Array.isArray(response.data)) {
+                    console.warn('API returned non-array data for hotels:', response.data);
+                }
             } else {
                 setError(response.error || 'فشل في تحميل الفنادق');
+                setHotels([]); // Ensure it's an array on error
             }
         } catch (err) {
             setError('حدث خطأ في الاتصال بالخادم');
@@ -148,8 +163,9 @@ export const useFrontendHotels = (
 
     // Filter and sort hotels
     const filteredHotels = useMemo(() => {
-        // 🛡️ Safety: Filter out invalid entries first (Allow strict numbers or convertibles)
-        let result = [...hotels].filter(h => h && h.basePrice != null && !isNaN(Number(h.basePrice)));
+        // 🛡️ Safety: Filter out invalid entries first
+        const hotelsArray = Array.isArray(hotels) ? hotels : [];
+        let result = hotelsArray.filter(h => h && h.basePrice != null && !isNaN(Number(h.basePrice)));
 
         // 1. Search filter
         if (searchQuery.trim()) {
@@ -157,15 +173,20 @@ export const useFrontendHotels = (
                 text.toLowerCase()
                     .replace(/ة/g, 'ه')
                     .replace(/أ|إ|آ/g, 'ا')
+                    .replace(/فندق/g, '') // Remove 'fandaq' anywhere (safer for search)
+                    .replace(/\b(hotel|the)\b/g, '') // Remove English particles
+                    .replace(/\s+/g, ' ')
                     .trim();
 
-            const query = normalize(searchQuery);
-            result = result.filter(hotel =>
-                normalize(hotel.name).includes(query) ||
-                normalize(hotel.nameEn || '').includes(query) ||
-                normalize(hotel.location).includes(query) ||
-                normalize(hotel.description || '').includes(query)
-            );
+            const queryTokens = normalize(searchQuery).split(' ').filter(t => t.length > 0);
+
+            result = result.filter(hotel => {
+                const combinedText = normalize(
+                    `${hotel.name} ${hotel.nameEn || ''} ${hotel.location} ${hotel.description || ''}`
+                );
+                // All tokens in query must be found in the hotel text
+                return queryTokens.every(token => combinedText.includes(token));
+            });
         }
 
         // 2. City filter

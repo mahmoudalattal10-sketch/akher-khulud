@@ -32,7 +32,7 @@ const AdminLogin = () => {
         setError(null);
 
         try {
-            const response = await AuthAPI.login(email, password);
+            const response = await AuthAPI.login(email, password, 'ADMIN');
 
             if (response.success && response.data?.user) {
                 const { user } = response.data;

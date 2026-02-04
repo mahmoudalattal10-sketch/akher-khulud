@@ -2,7 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Key, LogOut, Calendar, Heart, Settings, MapPin, CreditCard, Bell, Loader2, AlertCircle, Hotel, Printer } from 'lucide-react';
-import { AuthAPI, BookingsAPI } from '../services/api';
+import { AuthAPI, BookingsAPI, HotelsAPI } from '../services/api';
+import { API_BASE_URL } from '../services/api-client';
+import { useUserPreferences } from '../contexts/UserPreferencesContext';
+import HotelCard from '../features/hotels/components/HotelCard';
+import { Hotel as HotelType } from '../types';
 
 // Booking type from API
 interface UserBooking {
@@ -11,7 +15,7 @@ interface UserBooking {
     checkOut: string;
     totalPrice: number;
     guestsCount: number;
-    status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+    status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'FAILED';
     paymentStatus: 'UNPAID' | 'PAID' | 'REFUNDED';
     createdAt: string;
     room?: {
@@ -43,10 +47,33 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const { favorites } = useUserPreferences();
+    const [favoriteHotels, setFavoriteHotels] = useState<HotelType[]>([]);
+    const [loadingFavorites, setLoadingFavorites] = useState(false);
 
     useEffect(() => {
         checkAuthAndLoadData();
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'favorites' && favorites.length > 0) {
+            loadFavorites();
+        }
+    }, [activeTab, favorites]);
+
+    const loadFavorites = async () => {
+        setLoadingFavorites(true);
+        try {
+            const response = await HotelsAPI.getByIds(favorites);
+            if (response.success) {
+                setFavoriteHotels(response.data || []);
+            }
+        } catch (err) {
+            console.error('Failed to load favorites', err);
+        } finally {
+            setLoadingFavorites(false);
+        }
+    };
 
     const checkAuthAndLoadData = async () => {
         setLoading(true);
@@ -87,11 +114,12 @@ const Profile = () => {
 
     const getStatusDisplay = (status: string) => {
         switch (status) {
-            case 'CONFIRMED': return { text: 'مؤكد ✅', class: 'bg-gold-100 text-gold-dark' };
-            case 'PENDING': return { text: 'قيد الانتظار ⏳', class: 'bg-amber-100 text-amber-700' };
-            case 'CANCELLED': return { text: 'ملغي ❌', class: 'bg-red-100 text-red-700' };
-            case 'COMPLETED': return { text: 'مكتمل ✔️', class: 'bg-blue-100 text-blue-700' };
-            default: return { text: status, class: 'bg-slate-100 text-slate-700' };
+            case 'CONFIRMED': return { text: 'حجز مكتمل', class: 'bg-[#e6fcf5] text-[#0ca678] border-[#c3fae8]' };
+            case 'PENDING': return { text: 'بانتظار الدفع', class: 'bg-[#fff9ef] text-[#f59e0b] border-[#ffe3b3]' };
+            case 'CANCELLED': return { text: 'حجز ملغي', class: 'bg-slate-100 text-slate-500 border-slate-200' };
+            case 'FAILED': return { text: 'فشل الدفع', class: 'bg-rose-50 text-rose-600 border-rose-100' };
+            case 'COMPLETED': return { text: 'تمت الزيارة', class: 'bg-blue-50 text-blue-600 border-blue-100' };
+            default: return { text: status, class: 'bg-slate-50 text-slate-500' };
         }
     };
 
@@ -237,7 +265,7 @@ const Profile = () => {
                                                             <h3 className="text-xl font-black text-text">
                                                                 {booking.room?.hotel?.name || 'فندق'}
                                                             </h3>
-                                                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${statusDisplay.class}`}>
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border shadow-sm ${statusDisplay.class}`}>
                                                                 {statusDisplay.text}
                                                             </span>
                                                         </div>
@@ -254,6 +282,13 @@ const Profile = () => {
                                                     <div className="text-left mt-4 md:mt-0 flex flex-col items-end gap-3 min-w-[140px]">
                                                         <span className="text-gold font-black text-lg">{booking.totalPrice.toLocaleString()} ر.س</span>
                                                         <span className="text-[10px] text-slate-400 font-bold">#{booking.id.slice(0, 8).toUpperCase()}</span>
+                                                        <button
+                                                            onClick={() => navigate(`/booking/${booking.id}/voucher`)}
+                                                            className="flex items-center gap-2 bg-[#1a3d2a] text-secondary px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#142e20] transition-colors"
+                                                        >
+                                                            <Printer size={14} />
+                                                            عرض الفاتورة
+                                                        </button>
 
 
 
@@ -271,13 +306,26 @@ const Profile = () => {
                             <div className={`space-y-6 animate-fade-in-up transition-all ${!isLoggedIn ? 'blur-sm select-none pointer-events-none' : ''}`}>
                                 <h2 className="text-2xl font-black text-text mb-6 flex items-center gap-2">
                                     <Heart size={28} className="text-gold" />
-                                    المفضلة
+                                    المفضلة ({favorites.length})
                                 </h2>
-                                <div className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm text-center">
-                                    <Heart size={48} className="text-slate-300 mx-auto mb-4" />
-                                    <h3 className="text-xl font-black text-slate-700 mb-2">قائمة المفضلة فارغة</h3>
-                                    <p className="text-slate-400 font-bold">أضف الفنادق المفضلة لديك للوصول إليها بسهولة.</p>
-                                </div>
+
+                                {loadingFavorites ? (
+                                    <div className="flex justify-center py-20">
+                                        <Loader2 className="w-10 h-10 text-gold animate-spin" />
+                                    </div>
+                                ) : favorites.length === 0 ? (
+                                    <div className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm text-center">
+                                        <Heart size={48} className="text-slate-300 mx-auto mb-4" />
+                                        <h3 className="text-xl font-black text-slate-700 mb-2">قائمة المفضلة فارغة</h3>
+                                        <p className="text-slate-400 font-bold">أضف الفنادق المفضلة لديك للوصول إليها بسهولة.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {favoriteHotels.map((hotel, index) => (
+                                            <HotelCard key={hotel.id} hotel={hotel} index={index} />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 

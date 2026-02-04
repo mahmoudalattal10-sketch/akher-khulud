@@ -6,6 +6,7 @@ const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     message: ''
   });
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ const Contact: React.FC = () => {
       const data = await response.json();
       if (data.success) {
         setSuccess(true);
-        setFormData({ name: '', email: '', message: '' });
+        setFormData({ name: '', email: '', phone: '', message: '' });
         setTimeout(() => setSuccess(false), 5000);
       } else {
         setError(data.error || 'حدث خطأ أثناء الإرسال');
@@ -61,7 +62,7 @@ const Contact: React.FC = () => {
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tighter leading-tight">تواصل معنا</h1>
             <p className="text-slate-400 font-bold mb-14 leading-relaxed max-w-xs ml-auto">
-              فريق دعم <span className="text-gold">ضيافة خلود</span> متاح على مدار الساعة لتقديم الدعم الفني وتسهيل رحلتكم، مدعوماً بأحدث أنظمة الذكاء الاصطناعي.
+              فريق دعم <span className="text-gold">ضيافة خلود</span> متاح على مدار الساعة لتقديم الدعم الفني وتسهيل رحلتكم في أي مكان حول العالم.
             </p>
 
             <div className="space-y-12">
@@ -79,25 +80,35 @@ const Contact: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 justify-end group cursor-pointer">
+              <a href="https://wa.me/966553882445" target="_blank" rel="noopener noreferrer" className="flex items-center gap-6 justify-end group cursor-pointer">
                 <div className="text-right">
                   <h4 className="text-white font-black text-lg group-hover:text-gold transition-colors">الدعم المباشر</h4>
-                  <p className="text-slate-400 text-sm font-bold mt-1">055 388 2445</p>
+                  <p dir="ltr" className="text-slate-400 text-sm font-bold mt-1 inline-block">+966 55 388 2445</p>
                 </div>
                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10 group-hover:bg-gold group-hover:border-gold transition-all duration-300 shadow-lg">
                   <svg className="w-6 h-6 text-gold group-hover:text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </div>
-              </div>
+              </a>
             </div>
           </div>
 
           <div className="flex gap-4 justify-end mt-16 pt-10 border-t border-white/5 relative z-10">
-            {['Twitter', 'Instagram', 'WhatsApp'].map((social) => (
-              <div key={social} className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:border-gold transition-all duration-300 cursor-pointer group shadow-sm">
-                <span className="text-[10px] font-black text-white group-hover:text-secondary">{social[0]}</span>
-              </div>
+            {[
+              { name: 'Twitter', url: 'https://twitter.com/khulood' },
+              { name: 'Instagram', url: 'https://instagram.com/khulood' },
+              { name: 'WhatsApp', url: 'https://wa.me/966553882445' }
+            ].map((social) => (
+              <a
+                href={social.url}
+                key={social.name}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-gold hover:border-gold transition-all duration-300 cursor-pointer group shadow-sm"
+              >
+                <span className="text-[10px] font-black text-white group-hover:text-secondary">{social.name[0]}</span>
+              </a>
             ))}
           </div>
         </div>

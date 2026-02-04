@@ -38,6 +38,7 @@ export interface Review {
 export interface AdminHotel {
     id: string | number; // Support both string (API/UUID) and number (legacy)
     name: string;
+    nameEn?: string;
     city: string;
     country?: string;
     distanceFromHaram?: string;

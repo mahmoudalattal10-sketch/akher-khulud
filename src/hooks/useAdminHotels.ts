@@ -54,8 +54,8 @@ const transformToAdminHotel = (hotel: Hotel): AdminHotel => ({
             : (tryParse(r.images) || []),
         pricingPeriods: (Array.isArray(r.pricingPeriods) ? r.pricingPeriods : (tryParse(r.pricingPeriods) || [])).map((p: any) => ({
             ...p,
-            startDate: typeof p.startDate === 'string' ? p.startDate.split('T')[0] : p.startDate,
-            endDate: typeof p.endDate === 'string' ? p.endDate.split('T')[0] : p.endDate
+            startDate: typeof p.startDate === 'string' ? p.startDate.split(/[ T]/)[0] : p.startDate,
+            endDate: typeof p.endDate === 'string' ? p.endDate.split(/[ T]/)[0] : p.endDate
         })),
         amenities: Array.isArray(r.features)
             ? r.features.map((f: any) => typeof f === 'object' && f.name ? f.name : f)
@@ -95,6 +95,7 @@ const transformToAdminHotel = (hotel: Hotel): AdminHotel => ({
         return '39.8262';
     })(),
     mapQuery: hotel.nameEn,
+    nameEn: hotel.nameEn,
     summary: undefined,
     view: hotel.view || undefined,
     distanceFromHaram: hotel.distanceFromHaram || '',
@@ -113,28 +114,29 @@ const transformToAdminHotel = (hotel: Hotel): AdminHotel => ({
 const transformToAPIHotel = (hotel: AdminHotel): any => ({
     id: String(hotel.id), // Convert to string for API
     name: hotel.name,
-    nameEn: hotel.mapQuery || hotel.name,
+    nameEn: hotel.nameEn || hotel.mapQuery || hotel.name,
     location: hotel.location,
     locationEn: hotel.location,
     city: hotel.city,
     country: hotel.country,
     description: hotel.description,
-    rating: hotel.rating,
-    basePrice: hotel.price,
+    rating: Number(hotel.rating) || 0,
+    basePrice: Number(hotel.price) || 0,
     image: hotel.image,
     gallery: hotel.gallery, // [FIX] Send as 'gallery' to match backend service expectation
     coords: [parseFloat(String(hotel.lat)) || 0, parseFloat(String(hotel.lng)) || 0] as [number, number],
     amenities: hotel.amenities,
     view: hotel.view,
-    distanceFromHaram: (hotel.distance || hotel.distanceFromHaram || '').trim(),
-    hasFreeTransport: hotel.hasFreeTransport,
-    hasFreeBreakfast: hotel.hasFreeBreakfast,
-    extraBedStock: hotel.extraBedStock,
-    isFeatured: hotel.isFeatured ?? false,
-    isVisible: hotel.isVisible ?? true,
-    isOffer: hotel.isOffer ?? false,
+    distanceFromHaram: parseInt(String(hotel.distance || hotel.distanceFromHaram || '0')) || 0,
+    hasFreeTransport: Boolean(hotel.hasFreeTransport),
+    hasFreeBreakfast: Boolean(hotel.hasFreeBreakfast),
+    extraBedStock: parseInt(String(hotel.extraBedStock || '0')) || 0,
+    isFeatured: Boolean(hotel.isFeatured),
+    isVisible: Boolean(hotel.isVisible),
+    isOffer: Boolean(hotel.isOffer),
     discount: hotel.discount,
-    reviews: hotel.reviewsCount || 0
+    reviews: Number(hotel.reviewsCount) || 0,
+    nearbyLandmarks: hotel.nearbyLandmarks || []
 });
 
 interface UseAdminHotelsReturn {
@@ -145,7 +147,7 @@ interface UseAdminHotelsReturn {
     refetch: () => Promise<void>;
     saveHotel: (hotel: AdminHotel) => Promise<{ success: boolean; error?: string }>;
     deleteHotel: (id: string) => Promise<boolean>;
-    createHotel: (hotel: Partial<AdminHotel>) => Promise<AdminHotel | null>;
+    createHotel: (hotel: Partial<AdminHotel>) => Promise<{ success: boolean; data?: AdminHotel; error?: string }>;
     updateRoom: (hotelId: string, roomId: string, roomData: Partial<Room>) => Promise<{ success: boolean; error?: string }>;
     deleteRoom: (roomId: string) => Promise<boolean>;
     createRoom: (hotelId: string, roomData: Partial<Room>) => Promise<boolean>;
@@ -182,71 +184,79 @@ export function useAdminHotels(): UseAdminHotelsReturn {
 
     const saveHotel = useCallback(async (hotel: AdminHotel): Promise<{ success: boolean; error?: string }> => {
         setSaving(true);
-        const apiData = transformToAPIHotel(hotel);
+        try {
+            const apiData = transformToAPIHotel(hotel);
 
-        // 1. Update Hotel main record
-        const hotelResponse = await HotelsAPI.update(String(hotel.id), apiData);
+            // 1. Update Hotel main record
+            const hotelResponse = await HotelsAPI.update(String(hotel.id), apiData);
 
-        if (!hotelResponse.success) {
-            setSaving(false);
-            return { success: false, error: hotelResponse.error };
-        }
-
-        // 1.5. Synchronize Room Deletions
-        const currentHotel = hotels.find(h => h.id === hotel.id);
-        if (currentHotel) {
-            const currentRoomIds = (currentHotel.rooms || []).map(r => r.id).filter(Boolean);
-            const updatedRoomIds = (hotel.rooms || []).map(r => r.id).filter(Boolean);
-            const roomsToDelete = currentRoomIds.filter(id => !updatedRoomIds.includes(id));
-
-            for (const roomId of roomsToDelete) {
-                await RoomsAPI.delete(roomId as string);
-            }
-        }
-
-        // 2. Synchronize Rooms (Update or Create)
-        for (const room of hotel.rooms) {
-            const apiRoomData = {
-                name: room.name,
-                type: room.type,
-                capacity: room.capacity,
-                price: room.price,
-                availableStock: room.available,
-                mealPlan: room.mealPlan,
-                view: room.view,
-                area: room.area,
-                features: room.amenities,
-                images: room.images,
-                beds: room.beds,
-                sofa: room.sofa,
-                pricingPeriods: room.pricingPeriods || [],
-                allowExtraBed: room.allowExtraBed || false,
-                extraBedPrice: room.extraBedPrice || 0,
-                maxExtraBeds: room.maxExtraBeds || 1
-            };
-
-            let roomResponse;
-            if (room.id) {
-                // Update existing room
-                roomResponse = await RoomsAPI.update(room.id, apiRoomData as any);
-            } else {
-                // Create new room
-                roomResponse = await RoomsAPI.create(String(hotel.id), apiRoomData as any);
-            }
-
-            if (!roomResponse.success) {
-                console.error(`Failed to sync room ${room.name}:`, roomResponse.error);
+            if (!hotelResponse.success) {
+                const errorMsg = hotelResponse.error || 'فشل تحديث بيانات الفندق';
+                setError(errorMsg);
                 setSaving(false);
-                return { success: false, error: `فشل تحديث الغرفة "${room.name}": ${roomResponse.error}` };
+                return { success: false, error: errorMsg };
             }
+
+            // 1.5. Synchronize Room Deletions
+            const currentHotel = hotels.find(h => h.id === hotel.id);
+            if (currentHotel) {
+                const currentRoomIds = (currentHotel.rooms || []).map(r => r.id).filter(Boolean);
+                const updatedRoomIds = (hotel.rooms || []).map(r => r.id).filter(Boolean);
+                const roomsToDelete = currentRoomIds.filter(id => !updatedRoomIds.includes(id));
+
+                for (const roomId of roomsToDelete) {
+                    await RoomsAPI.delete(roomId as string);
+                }
+            }
+
+            // 2. Synchronize Rooms (Update or Create)
+            for (const room of hotel.rooms) {
+                const apiRoomData = {
+                    name: room.name,
+                    type: room.type,
+                    capacity: Number(room.capacity),
+                    price: Number(room.price),
+                    availableStock: Number(room.available),
+                    mealPlan: room.mealPlan,
+                    view: room.view,
+                    area: Number(room.area),
+                    features: room.amenities,
+                    images: room.images,
+                    beds: room.beds,
+                    sofa: Boolean(room.sofa),
+                    pricingPeriods: (room.pricingPeriods || []).map(p => ({
+                        ...p,
+                        price: Number(p.price)
+                    })),
+                    allowExtraBed: Boolean(room.allowExtraBed),
+                    extraBedPrice: Number(room.extraBedPrice),
+                    maxExtraBeds: Number(room.maxExtraBeds)
+                };
+
+                let roomResponse;
+                if (room.id) {
+                    // Update existing room
+                    roomResponse = await RoomsAPI.update(room.id, apiRoomData as any);
+                } else {
+                    // Create new room
+                    roomResponse = await RoomsAPI.create(String(hotel.id), apiRoomData as any);
+                }
+
+                if (!roomResponse.success) {
+                    console.error(`Failed to sync room ${room.name}:`, roomResponse.error);
+                    setSaving(false);
+                    return { success: false, error: `فشل تحديث الغرفة "${room.name}": ${roomResponse.error}` };
+                }
+            }
+
+            setSaving(false);
+            await fetchHotels(); // Refresh to get final state from DB
+            return { success: true };
+        } catch (err) {
+            console.error('Error in saveHotel:', err);
+            setSaving(false);
+            return { success: false, error: err instanceof Error ? err.message : 'Unknown error occurred' };
         }
-
-        // 3. Optional: Delete rooms not in the current list?
-        // (For now, we assume explicit deletion from the UI handles this)
-
-        setSaving(false);
-        await fetchHotels(); // Refresh to get final state from DB
-        return { success: true };
     }, [fetchHotels, hotels]);
 
     const deleteHotel = useCallback(async (id: string): Promise<boolean> => {
@@ -260,7 +270,7 @@ export function useAdminHotels(): UseAdminHotelsReturn {
         return false;
     }, []);
 
-    const createHotel = useCallback(async (hotelData: Partial<AdminHotel>): Promise<AdminHotel | null> => {
+    const createHotel = useCallback(async (hotelData: Partial<AdminHotel>): Promise<{ success: boolean; data?: AdminHotel; error?: string }> => {
         setSaving(true);
 
         // Prepare minimal data for creation
@@ -309,7 +319,11 @@ export function useAdminHotels(): UseAdminHotelsReturn {
                         extraBedPrice: room.extraBedPrice || 0,
                         maxExtraBeds: room.maxExtraBeds || 1
                     };
-                    await RoomsAPI.create(newHotelId, apiRoomData as any);
+                    const roomRes = await RoomsAPI.create(newHotelId, apiRoomData as any);
+                    if (!roomRes.success) {
+                        console.error("Room creation failed:", roomRes.error);
+                        // We don't fail the whole hotel creation, but maybe we should log it
+                    }
                 }
             }
 
@@ -319,12 +333,19 @@ export function useAdminHotels(): UseAdminHotelsReturn {
                 const newAdminHotel = transformToAdminHotel(fullHotelResponse.data);
                 setHotels(prev => [...prev, newAdminHotel]);
                 setSaving(false);
-                return newAdminHotel;
+                return { success: true, data: newAdminHotel };
+            } else {
+                const errorMsg = 'تم إنشاء الفندق ولكن فشل استرجاع البيانات المحدثة';
+                setError(errorMsg);
+                setSaving(false);
+                return { success: false, error: errorMsg };
             }
         }
 
+        const finalError = response.error || 'فشل إنشاء الفندق الجديد';
+        setError(finalError);
         setSaving(false);
-        return null;
+        return { success: false, error: finalError };
     }, []);
 
     const updateRoom = useCallback(async (hotelId: string, roomId: string, roomData: Partial<Room>): Promise<{ success: boolean; error?: string }> => {

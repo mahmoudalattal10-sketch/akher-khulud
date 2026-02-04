@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import HotelCard from '../components/HotelCard';
-import PremiumSearch from '../components/PremiumSearch';
-import MobileSearchOverlay from '../components/MobileSearchOverlay';
+import HotelCard from '../features/hotels/components/HotelCard';
+import PremiumSearch from '../features/search/components/PremiumSearch';
+import MobileSearchOverlay from '../features/search/components/MobileSearchOverlay';
 import { useFrontendHotels } from '../hooks/useFrontendHotels';
+import { useSearch } from '../contexts/SearchContext';
 import { Filter, MapPin, SlidersHorizontal, Star, ArrowUpDown, Loader2, RefreshCw, AlertCircle, Wifi, Utensils, Car, Search, ChevronLeft, Eye, Sparkles, X } from 'lucide-react';
-import HotelCardSkeleton from '../components/HotelCardSkeleton';
+import HotelCardSkeleton from '../features/hotels/components/HotelCardSkeleton';
 
 const Hotels = () => {
     const navigate = useNavigate();
@@ -17,9 +18,27 @@ const Hotels = () => {
     const checkOut = searchParams.get('checkOut');
     const guests = searchParams.get('guests') ? Number(searchParams.get('guests')) : undefined;
 
+    // [ENFORCEMENT] Relaxed: Allow if City is present (for Top Destinations) OR if all params are present
+    const hasRequiredParams = Boolean(cityFilter);
+
+    // [PERSISTENCE] Check if we can restore from context
+    const { searchData } = useSearch();
+    const canRestore = !hasRequiredParams && !cityFilter && searchData.hasSearched && !!searchData.destination;
+
+    // [STATE] Restoring state to prevent flash of "Search Required"
+    const [isRestoring, setIsRestoring] = useState(canRestore);
+
     const [showMobileFilters, setShowMobileFilters] = useState(false);
-    const [showMobileSearch, setShowMobileSearch] = useState(false);
+    // Don't auto-open search if we are busy restoring
+    const [showMobileSearch, setShowMobileSearch] = useState(!hasRequiredParams && !canRestore);
     const [isSortOpen, setIsSortOpen] = useState(false);
+
+    // Auto-open search on mobile if missing params (only if NOT restoring)
+    useEffect(() => {
+        if (!hasRequiredParams && !isRestoring && window.innerWidth < 1024) {
+            setShowMobileSearch(true);
+        }
+    }, [hasRequiredParams, isRestoring]);
 
     // 🚀 Use the new API-connected hook
     const {
@@ -36,6 +55,63 @@ const Hotels = () => {
         setSearchQuery,
         filteredCount,
     } = useFrontendHotels(cityFilter, { checkIn, checkOut, guests });
+
+    // [PERSISTENCE EFFECT] Restore search from Context if URL params are missing
+    useEffect(() => {
+        // If URL params are missing (and we're not just viewing "Top Destinations" via city),
+        // try to restore from Context
+        if (canRestore) {
+            const params = new URLSearchParams();
+
+            // Map context data back to URL params with normalization (Same as handleSearch)
+            let cityValue = searchData.destination;
+            const cityLower = cityValue?.toLowerCase() || '';
+
+            if (['مكة المكرمة', 'مكه المكرمه', 'مكة', 'مكه', 'makkah'].includes(cityLower) || cityLower.includes('مكة') || cityLower.includes('makkah')) {
+                cityValue = 'makkah';
+            } else if (['المدينة المنورة', 'المدينه المنوره', 'المدينة', 'المدينه', 'madinah'].includes(cityLower) || cityLower.includes('مدينة') || cityLower.includes('madinah')) {
+                cityValue = 'madinah';
+            } else if (['جدة', 'جده', 'jeddah'].includes(cityLower)) {
+                cityValue = 'jeddah';
+            } else if (['الرياض', 'riyadh'].includes(cityLower)) {
+                cityValue = 'riyadh';
+            }
+
+            params.set('city', cityValue);
+
+            if (searchData.checkIn) {
+                const formatDate = (date: Date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+                params.set('checkIn', formatDate(new Date(searchData.checkIn)));
+            }
+
+            if (searchData.checkOut) {
+                const formatDate = (date: Date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+                params.set('checkOut', formatDate(new Date(searchData.checkOut)));
+            }
+
+            if (searchData.adults || searchData.children) {
+                const totalGuests = (searchData.adults || 0) + (searchData.children || 0);
+                if (totalGuests > 0) params.set('guests', totalGuests.toString());
+            }
+
+            // Redirect to restore session
+            console.log("Restoring session from context...", params.toString());
+            navigate(`/hotels?${params.toString()}`, { replace: true });
+        } else {
+            // If we can't restore or don't need to, stop restoring state
+            setIsRestoring(false);
+        }
+    }, [canRestore, searchData, navigate]);
 
     // Local state for UI (synced with hook)
     const [priceRange, setPriceRange] = useState(filters.maxPrice || 3000);
@@ -204,7 +280,7 @@ const Hotels = () => {
             <div className="relative z-30 bg-slate-50/95 backdrop-blur-md py-4 border-b border-slate-200 transition-all duration-300 shadow-sm">
                 <div className="max-w-[1600px] mx-auto px-4 md:px-8">
                     <div className="hidden md:block">
-                        <PremiumSearch onSearch={handleSearch} hideAiToggle={true} />
+                        <PremiumSearch onSearch={handleSearch} hideAiToggle={true} disableScroll={true} />
                     </div>
 
                     {/* Mobile Research Trigger */}
@@ -233,7 +309,7 @@ const Hotels = () => {
                 <div className="flex flex-col lg:flex-row gap-8">
 
                     {/* Sidebar Filters (Desktop) */}
-                    <aside className="hidden lg:block w-80 shrink-0 space-y-8 sticky top-48 h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar pl-4">
+                    <aside className="hidden lg:block w-80 shrink-0 space-y-8 sticky top-48 h-[calc(100vh-12rem)] overflow-y-auto no-scrollbar pl-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-black text-text">تصفية النتائج</h2>
                             <button onClick={handleResetFilters} className="text-xs text-slate-500 font-bold hover:text-gold transition-colors">إعادة تعيين</button>
@@ -382,7 +458,31 @@ const Hotels = () => {
 
                         {/* Hotels List */}
                         <div className="space-y-6">
-                            {error ? (
+                            {isRestoring ? (
+                                <div className="flex flex-col items-center justify-center py-32 text-center animate-in fade-in duration-300">
+                                    <h3 className="text-xl font-bold text-slate-400 mb-2">جاري استرجاع بحثك السابق...</h3>
+                                    <Loader2 className="w-8 h-8 text-gold animate-spin" />
+                                </div>
+                            ) : !hasRequiredParams ? (
+                                <div className="text-center py-20 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+                                    <div className="w-24 h-24 bg-gold/5 rounded-full flex items-center justify-center mx-auto mb-6 text-gold animate-pulse">
+                                        <Search size={40} />
+                                    </div>
+                                    <h3 className="text-2xl font-black text-text mb-3">ابدأ رحلتك معنا</h3>
+                                    <p className="text-slate-500 font-bold mb-8 max-w-md mx-auto leading-relaxed">
+                                        يرجى تحديد وجهتك وتواريخ السفر وعدد الضيوف لعرض أفضل الفنادق المتاحة لك.
+                                    </p>
+                                    <button
+                                        onClick={() => setShowMobileSearch(true)}
+                                        className="lg:hidden bg-primary text-white px-8 py-4 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                                    >
+                                        تحديد خيارات البحث
+                                    </button>
+                                    <div className="hidden lg:block text-slate-400 font-medium text-sm">
+                                        استخدم شريط البحث في الأعلى للبدء 👆
+                                    </div>
+                                </div>
+                            ) : error ? (
                                 <div className="text-center py-20 bg-white rounded-[2.5rem] border border-red-100 shadow-sm">
                                     <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-400">
                                         <AlertCircle size={32} />
@@ -402,8 +502,8 @@ const Hotels = () => {
                                     <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center mb-6">
                                         <Loader2 className="w-10 h-10 text-gold animate-spin" />
                                     </div>
-                                    <h3 className="text-2xl font-black text-[#0f172a] mb-2">جاري تحميل الفنادق...</h3>
-                                    <p className="text-slate-400 font-bold">يرجى الانتظار لحظات بينما نقوم بجلب أفضل العروض</p>
+                                    <h3 className="text-2xl font-black text-[#0f172a] mb-2">جاري البحث عن أفضل الخيارات...</h3>
+                                    <p className="text-slate-400 font-bold">يرجى الانتظار لحظات، نقوم بمطابقة بحثك مع فنادقنا المميزة</p>
                                 </div>
                             ) : filteredHotels.length > 0 ? (
                                 filteredHotels.map((hotel, index) => (
@@ -420,8 +520,8 @@ const Hotels = () => {
                                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
                                         <Filter size={32} />
                                     </div>
-                                    <h3 className="text-xl font-black text-text mb-2">لا توجد نتائج</h3>
-                                    <p className="text-slate-500 font-medium mb-6">جرب تغيير خيارات التصفية للحصول على نتائج أكثر</p>
+                                    <h3 className="text-xl font-black text-text mb-2">لا توجد فنادق متاحة لهذا البحث</h3>
+                                    <p className="text-slate-500 font-medium mb-6">جرب تغيير التواريخ أو المرشحات للحصول على نتائج</p>
                                     <button
                                         onClick={handleResetFilters}
                                         className="bg-gold text-white px-8 py-3 rounded-xl font-bold hover:bg-gold-dark transition-colors"

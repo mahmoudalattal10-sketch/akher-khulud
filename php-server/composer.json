@@ -1,0 +1,23 @@
+{
+    "name": "diafat/api",
+    "description": "Professional Backend API for Diafat Al-Haramain",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "vlucas/phpdotenv": "^5.5",
+        "firebase/php-jwt": "^6.8",
+        "ramsey/uuid": "^4.7",
+        "tecnickcom/tcpdf": "^6.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Diafat\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Nexus Core",
+            "email": "dev@nexus.com"
+        }
+    ]
+}

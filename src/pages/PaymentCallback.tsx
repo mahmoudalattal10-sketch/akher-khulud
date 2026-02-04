@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, MessageCircle, Phone, Copy, Check, Home, ArrowLeft, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, MessageCircle, Phone, Copy, Check, Home, ArrowLeft, ArrowRight, Sparkles, ShieldCheck, Printer } from 'lucide-react';
 import { CONTACT_INFO } from '../constants';
 
 const PaymentCallback: React.FC = () => {
@@ -9,6 +9,7 @@ const PaymentCallback: React.FC = () => {
     const navigate = useNavigate();
     const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
     const [message, setMessage] = useState('');
+    const [bookingId, setBookingId] = useState<string | null>(null);
     const [reference, setReference] = useState('');
     const [copied, setCopied] = useState(false);
 
@@ -18,16 +19,17 @@ const PaymentCallback: React.FC = () => {
     useEffect(() => {
         const verifyPayment = async () => {
             const searchParams = new URLSearchParams(location.search);
-            const bookingId = searchParams.get('cartId') || searchParams.get('cart_id');
+            const bId = searchParams.get('cartId') || searchParams.get('cart_id');
             const tranRef = searchParams.get('tranRef') || searchParams.get('tran_ref');
 
-            if (!bookingId) {
+            if (!bId) {
                 setStatus('failed');
                 setMessage('رقم الحجز مفقود');
                 return;
             }
 
-            setReference(tranRef || `BK-${bookingId.substring(0, 8)}`);
+            setBookingId(bId);
+            setReference(tranRef || `BK-${bId.substring(0, 8)}`);
 
             const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
                 ? '/api'
@@ -68,6 +70,9 @@ const PaymentCallback: React.FC = () => {
                     } else if (booking.paymentStatus === 'REFUNDED') {
                         setStatus('failed');
                         setMessage('تم استرداد المبلغ.');
+                    } else if (booking.status === 'FAILED') {
+                        setStatus('failed');
+                        setMessage('عذراً، لم تنجح عملية الدفع. يرجى المحاولة مرة أخرى.');
                     } else {
                         // Still UNPAID/PENDING? Retry or Show Error if max attempts reached
                         if (attempts < maxAttempts) {
@@ -210,6 +215,16 @@ const PaymentCallback: React.FC = () => {
                             </div>
 
                             {/* CTA */}
+                            {bookingId && (
+                                <Link
+                                    to={`/booking/${bookingId}/voucher`}
+                                    className="w-full bg-[#1a3d2a] text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 hover:bg-[#142e20] hover:scale-[1.02] active:scale-95 transition-all shadow-lg mb-4"
+                                >
+                                    <Printer size={20} />
+                                    عرض الفاتورة / View Voucher
+                                </Link>
+                            )}
+
                             <Link
                                 to="/"
                                 className="w-full bg-primary text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 hover:bg-gold hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)]"

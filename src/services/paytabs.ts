@@ -25,13 +25,19 @@ export const createPaymentPage = async (paymentData: PaymentRequest) => {
     // For now, we'll simulate a successful payment redirection or call a proxy endpoint
 
     // We'll call the backend proxy which handles the PayTabs secret key securely
-    const response = await fetch('/api/payment/create', {
+    // Map existing structure to backend expectations
+    const payload = {
+        bookingId: paymentData.cart_id,
+        userDetails: paymentData.customer_details
+    };
+
+    const response = await fetch('/api/payment/initiate', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             ...(AuthAPI.isLoggedIn() ? { 'Authorization': `Bearer ${localStorage.getItem('diafat_auth_token')}` } : {})
         },
-        body: JSON.stringify(paymentData)
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
