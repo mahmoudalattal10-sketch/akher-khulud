@@ -105,13 +105,13 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
     <Link to={`/hotel/${hotel.slug || hotel.id}`} className={`block group ${offerMode ? 'h-full' : 'mb-8'}`}>
       <div
         ref={cardRef}
-        className={`relative bg-white/40 backdrop-blur-md rounded-[2.8rem] border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-700 hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] hover:-translate-y-2 flex flex-col ${offerMode ? 'h-full' : 'md:flex-row'} gap-0 ${offerMode ? '' : 'md:gap-8'} p-4 ${isVisible ? 'animate-ios-slide' : 'opacity-0'} will-change-transform`}
+        className={`relative bg-white md:bg-white/40 md:backdrop-blur-md rounded-[2rem] md:rounded-[2.8rem] border border-slate-100 md:border-white/40 shadow-sm md:shadow-[0_8px_32px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-700 hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] hover:-translate-y-2 flex flex-col ${offerMode ? 'h-full' : 'md:flex-row'} gap-0 ${offerMode ? '' : 'md:gap-8'} p-3 md:p-4 ${isVisible ? 'animate-ios-slide' : 'opacity-0'} will-change-transform`}
         style={{ animationDelay: `${(index % 3) * 150}ms` }}
       >
         {/* 1. IMAGE SECTION (Adaptive) */}
-        <div className={`w-full ${offerMode ? 'aspect-[4/3] h-[200px]' : 'md:w-[380px] lg:w-[440px] aspect-[4/3] md:aspect-auto md:h-[320px]'} rounded-[2.2rem] overflow-hidden relative shrink-0 shadow-2xl`}>
+        <div className={`w-full ${offerMode ? 'aspect-[4/3] h-[200px]' : 'md:w-[380px] lg:w-[440px] aspect-[4/3] md:aspect-auto md:h-[320px]'} rounded-[1.8rem] md:rounded-[2.2rem] overflow-hidden relative shrink-0 shadow-md md:shadow-2xl`}>
           <motion.img
-            layoutId={`hotel-image-${hotel.id}`}
+            layoutId={window.innerWidth > 768 ? `hotel-image-${hotel.id}` : undefined}
             transition={{ duration: 0.6, ease: [0.43, 0.13, 0.23, 0.96] }}
             src={getImageUrl(hotel.image)}
             alt={hotel.name}

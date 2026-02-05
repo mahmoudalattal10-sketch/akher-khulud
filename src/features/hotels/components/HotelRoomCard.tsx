@@ -85,18 +85,18 @@ const HotelRoomCard: React.FC<HotelRoomCardProps> = ({
                     <div>
                         {/* Header */}
                         <div className="mb-6">
-                            <h3 className="text-3xl font-black text-[#0F172A] mb-3 text-right tracking-tight">{group.name}</h3>
-                            <div className="flex items-center gap-4 text-slate-400 text-[11px] sm:text-[12px] font-bold">
+                            <h3 className="text-2xl sm:text-3xl font-black text-[#0F172A] mb-3 text-right tracking-tight">{group.name}</h3>
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-slate-400 text-[11px] sm:text-[12px] font-bold">
                                 <div className="flex items-center gap-1.5">
                                     <BedDouble size={14} strokeWidth={2} className="text-[#A2AAB8]" />
                                     <span>{group.bed}</span>
                                 </div>
-                                <div className="w-1 h-1 bg-slate-200 rounded-full" />
+                                <div className="hidden sm:block w-1 h-1 bg-slate-200 rounded-full" />
                                 <div className="flex items-center gap-1.5">
                                     <Maximize size={14} strokeWidth={2} className="text-[#A2AAB8]" />
                                     <span>{group.size} م²</span>
                                 </div>
-                                <div className="w-1 h-1 bg-slate-200 rounded-full" />
+                                <div className="hidden sm:block w-1 h-1 bg-slate-200 rounded-full" />
                                 <div className="flex items-center gap-1.5">
                                     <Users size={15} strokeWidth={2} className="text-[#A2AAB8]" />
                                     <span>حتى {group.capacity} أشخاص</span>
@@ -155,9 +155,11 @@ const HotelRoomCard: React.FC<HotelRoomCardProps> = ({
 
                                         <div className="px-1">
                                             {/* Action Row: Re-imagined for Mobile & Desktop */}
-                                            <div className="flex flex-row items-center justify-between gap-3 md:gap-6 mb-6">
+                                            {/* Action Row: Re-imagined for Mobile & Desktop */}
+                                            <div className="flex flex-wrap items-end sm:items-center justify-between gap-y-4 gap-x-2 sm:gap-6 mb-6">
 
-                                                <div className="w-[100px] sm:w-[130px] md:w-[150px] flex-shrink-0 order-1">
+                                                {/* Button Section: Order 4 on Mobile (Bottom), Order 1 on Desktop (Right in RTL) */}
+                                                <div className="w-full sm:w-[130px] md:w-[150px] flex-shrink-0 order-4 sm:order-1 pt-2 sm:pt-0">
                                                     {quantity === 0 ? (
                                                         <button
                                                             onClick={() => {
@@ -167,48 +169,48 @@ const HotelRoomCard: React.FC<HotelRoomCardProps> = ({
                                                                 }
                                                                 onQuantityChange(room.id, 1, room.inventory);
                                                             }}
-                                                            className={`w-full py-2 sm:py-3 rounded-full border text-[13px] sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all shadow-sm ${(!hasDates || isPartial)
+                                                            className={`w-full py-3 sm:py-3 rounded-full border text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${(!hasDates || isPartial)
                                                                 ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
                                                                 : 'border-[#E2E8F0] text-[#0F172A] hover:bg-slate-50 hover:border-slate-300 active:scale-95'
                                                                 }`}
                                                         >
-                                                            <Plus className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${(!hasDates || isPartial) ? 'text-amber-600' : ''}`} />
+                                                            <Plus className={`w-[18px] h-[18px] ${(!hasDates || isPartial) ? 'text-amber-600' : ''}`} />
                                                             <span>{isPartial ? 'تغيير التاريخ' : 'إختر'}</span>
                                                         </button>
                                                     ) : (
-                                                        <div className="w-full h-[42px] sm:h-[50px] bg-white border border-[#E2E8F0] rounded-full flex items-center justify-between px-1.5 sm:px-2 shadow-sm">
+                                                        <div className="w-full h-[50px] bg-white border border-[#E2E8F0] rounded-full flex items-center justify-between px-2 shadow-sm">
                                                             <button
                                                                 onClick={() => !isPartial && onQuantityChange(room.id, 1, room.inventory)}
-                                                                className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full text-[#10B981] flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-30 ${isPartial ? 'cursor-not-allowed opacity-20' : ''}`}
+                                                                className={`w-9 h-9 rounded-full text-[#10B981] flex items-center justify-center hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-30 ${isPartial ? 'cursor-not-allowed opacity-20' : ''}`}
                                                                 disabled={quantity >= room.inventory || isPartial}
                                                             >
-                                                                <Plus className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                                                                <Plus className="w-5 h-5" strokeWidth={2.5} />
                                                             </button>
-                                                            <span className="font-bold text-base sm:text-xl text-[#0F172A] w-5 sm:w-6 text-center pt-0.5">{quantity}</span>
+                                                            <span className="font-bold text-xl text-[#0F172A] w-6 text-center pt-0.5">{quantity}</span>
                                                             <button
                                                                 onClick={() => onQuantityChange(room.id, -1, room.inventory)}
-                                                                className="w-7 h-7 sm:w-9 sm:h-9 rounded-full text-slate-300 flex items-center justify-center hover:bg-slate-50 transition-all active:scale-95"
+                                                                className="w-9 h-9 rounded-full text-slate-300 flex items-center justify-center hover:bg-slate-50 transition-all active:scale-95"
                                                                 disabled={!quantity}
                                                             >
-                                                                <Minus className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2.5} />
+                                                                <Minus className="w-5 h-5" strokeWidth={2.5} />
                                                             </button>
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                {/* Price Section - Centered with breathable spacing */}
-                                                <div className="flex flex-col items-center flex-1 order-2 px-1">
+                                                {/* Price Section: Order 1 on Mobile (Right), Order 2 on Desktop (Center) */}
+                                                <div className="flex flex-col items-start sm:items-center w-auto sm:flex-1 order-1 sm:order-2">
                                                     <div className="flex items-baseline gap-1.5 sm:gap-2">
-                                                        <span className="text-2xl sm:text-4xl font-black text-[#0F172A] leading-none">{room.price}</span>
+                                                        <span className="text-3xl sm:text-4xl font-black text-[#0F172A] leading-none">{room.price}</span>
                                                         <div className="flex flex-col items-start">
-                                                            <span className="text-[9px] sm:text-[11px] text-[#64748B] font-bold leading-tight">ريال / ليلة</span>
-                                                            <span className="text-[9px] sm:text-[11px] text-[#64748B] font-medium leading-tight opacity-70">شامل الضريبة</span>
+                                                            <span className="text-[10px] sm:text-[11px] text-[#64748B] font-bold leading-tight">ريال / ليلة</span>
+                                                            <span className="text-[10px] sm:text-[11px] text-[#64748B] font-medium leading-tight opacity-70">شامل الضريبة</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Features Section - Order 3 (Left in RTL) */}
-                                                <div className="flex flex-col items-end gap-1 sm:gap-2 order-3 flex-shrink-0">
+                                                {/* Features Section: Order 2 on Mobile (Left), Order 3 on Desktop (Left) */}
+                                                <div className="flex flex-col items-end gap-1 sm:gap-2 order-2 sm:order-3 w-auto flex-shrink-0">
                                                     {/* Primary Feature: Meal Plan or First Tag */}
                                                     {room.mealPlan && room.mealPlan !== 'none' ? (
                                                         <div className="flex items-center gap-1.5 sm:gap-2 opacity-80">
@@ -227,47 +229,47 @@ const HotelRoomCard: React.FC<HotelRoomCardProps> = ({
                                                         <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-500" strokeWidth={2.5} />
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Extra Bed Row - Elegant Mobile Design */}
-                                            {room.allowExtraBed && (
-                                                <div className="mt-4 bg-[#F8FAFC] rounded-[1.5rem] p-3 sm:p-4 flex items-center justify-between border border-[#F1F5F9] shadow-sm/50">
-                                                    {/* Right: Info Section */}
-                                                    <div className="flex items-center gap-2.5 sm:gap-4 text-right order-1">
-                                                        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-white border border-[#F1F5F9] flex items-center justify-center text-[#10B981] shadow-sm">
-                                                            <BedDouble className="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px]" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
-                                                                <h4 className="text-[13px] sm:text-[15px] font-bold text-[#0F172A]">إضافة سرير إضافي</h4>
-                                                                <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${extraBedCounts[room.id] > 0 ? 'bg-[#10B981] text-white' : 'bg-white border border-slate-100 text-[#10B981]'}`}>
-                                                                    {room.extraBedPrice > 0 ? `${room.extraBedPrice} ريال` : 'مجاني'}
-                                                                </span>
+                                                {/* Extra Bed Row - Incorporated into Flex Flow */}
+                                                {room.allowExtraBed && (
+                                                    <div className="w-full order-3 sm:order-4 mt-2 sm:mt-4 bg-[#F8FAFC] rounded-[1.5rem] p-3 sm:p-4 flex items-center justify-between border border-[#F1F5F9] shadow-sm/50">
+                                                        {/* Right: Info Section */}
+                                                        <div className="flex items-center gap-2.5 sm:gap-4 text-right order-1">
+                                                            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-white border border-[#F1F5F9] flex items-center justify-center text-[#10B981] shadow-sm">
+                                                                <BedDouble className="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px]" />
                                                             </div>
-                                                            <p className="text-[10px] sm:text-[11px] font-medium text-[#94A3B8] mt-0.5 opacity-80">بحد أقصى {room.maxExtraBeds} أسرة لكل غرفة</p>
+                                                            <div>
+                                                                <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                                                                    <h4 className="text-[13px] sm:text-[15px] font-bold text-[#0F172A]">إضافة سرير إضافي</h4>
+                                                                    <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm ${extraBedCounts[room.id] > 0 ? 'bg-[#10B981] text-white' : 'bg-white border border-slate-100 text-[#10B981]'}`}>
+                                                                        {room.extraBedPrice > 0 ? `${room.extraBedPrice} ريال` : 'مجاني'}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-[10px] sm:text-[11px] font-medium text-[#94A3B8] mt-0.5 opacity-80">بحد أقصى {room.maxExtraBeds} أسرة لكل غرفة</p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Left: Modern Counter */}
+                                                        <div className="bg-white border border-[#E2E8F0] rounded-xl h-9 sm:h-11 flex items-center px-1 shadow-sm order-2">
+                                                            <button
+                                                                onClick={() => onExtraBedChange(room.id, 1, room.maxExtraBeds)}
+                                                                disabled={extraBedCounts[room.id] >= room.maxExtraBeds}
+                                                                className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg text-[#10B981] flex items-center justify-center hover:bg-emerald-50 transition-all disabled:opacity-20"
+                                                            >
+                                                                <Plus className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px]" strokeWidth={3} />
+                                                            </button>
+                                                            <span className="font-bold text-sm sm:text-lg w-6 sm:w-8 text-center text-[#0F172A]">{extraBedCounts[room.id] || 0}</span>
+                                                            <button
+                                                                onClick={() => onExtraBedChange(room.id, -1, room.maxExtraBeds)}
+                                                                disabled={!extraBedCounts[room.id]}
+                                                                className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg text-slate-300 flex items-center justify-center hover:bg-slate-50 transition-all disabled:opacity-20"
+                                                            >
+                                                                <Minus className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px]" strokeWidth={3} />
+                                                            </button>
                                                         </div>
                                                     </div>
-
-                                                    {/* Left: Modern Counter */}
-                                                    <div className="bg-white border border-[#E2E8F0] rounded-xl h-9 sm:h-11 flex items-center px-1 shadow-sm order-2">
-                                                        <button
-                                                            onClick={() => onExtraBedChange(room.id, 1, room.maxExtraBeds)}
-                                                            disabled={extraBedCounts[room.id] >= room.maxExtraBeds}
-                                                            className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg text-[#10B981] flex items-center justify-center hover:bg-emerald-50 transition-all disabled:opacity-20"
-                                                        >
-                                                            <Plus className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px]" strokeWidth={3} />
-                                                        </button>
-                                                        <span className="font-bold text-sm sm:text-lg w-6 sm:w-8 text-center text-[#0F172A]">{extraBedCounts[room.id] || 0}</span>
-                                                        <button
-                                                            onClick={() => onExtraBedChange(room.id, -1, room.maxExtraBeds)}
-                                                            disabled={!extraBedCounts[room.id]}
-                                                            className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg text-slate-300 flex items-center justify-center hover:bg-slate-50 transition-all disabled:opacity-20"
-                                                        >
-                                                            <Minus className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px]" strokeWidth={3} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );

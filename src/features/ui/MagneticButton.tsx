@@ -15,6 +15,7 @@ const MagneticButton: React.FC<MagneticButtonProps> = ({
     ...props
 }) => {
     const ref = useRef<HTMLButtonElement>(null);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
     const x = useMotionValue(0);
     const y = useMotionValue(0);
@@ -24,6 +25,8 @@ const MagneticButton: React.FC<MagneticButtonProps> = ({
     const springY = useSpring(y, springConfig);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (isMobile) return;
+
         const { clientX, clientY } = e;
         const { left, top, width, height } = ref.current?.getBoundingClientRect() || { left: 0, top: 0, width: 0, height: 0 };
 
@@ -38,6 +41,7 @@ const MagneticButton: React.FC<MagneticButtonProps> = ({
     };
 
     const handleMouseLeave = () => {
+        if (isMobile) return;
         x.set(0);
         y.set(0);
     };
@@ -48,7 +52,7 @@ const MagneticButton: React.FC<MagneticButtonProps> = ({
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             onClick={onClick}
-            style={{ x: springX, y: springY }}
+            style={{ x: isMobile ? 0 : springX, y: isMobile ? 0 : springY }}
             className={`relative overflow-hidden will-change-transform ${className}`}
             {...props as any}
         >

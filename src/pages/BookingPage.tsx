@@ -432,7 +432,7 @@ const BookingPage = () => {
                 <div className="max-w-[1400px] mx-auto h-full px-6 flex items-center justify-between">
                     {/* Right Side: Brand & Back Action */}
                     <div className="flex items-center gap-4">
-                        <Link to="/" className="transition-all active:scale-95 shrink-0">
+                        <Link to="/" className="hidden sm:block transition-all active:scale-95 shrink-0">
                             <img src="/assets/images/ui/logo.png" alt="Logo" className="h-16 w-auto" />
                         </Link>
 
@@ -692,7 +692,7 @@ const BookingPage = () => {
                                             <div className="border-t border-dashed border-slate-300 my-4" />
 
                                             {/* Total */}
-                                            <div className="flex justify-between items-end">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                                                 <div>
                                                     <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المجموع الكلي</span>
                                                     <div className="flex items-baseline gap-1">
@@ -704,7 +704,7 @@ const BookingPage = () => {
                                                 {/* Action Button Integrated */}
                                                 <button
                                                     onClick={handleNext}
-                                                    className="bg-secondary hover:bg-gold text-white px-8 py-3 rounded-xl font-black text-sm shadow-xl shadow-secondary/10 hover:shadow-gold/20 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center gap-2"
+                                                    className="w-full sm:w-auto bg-secondary hover:bg-gold text-white px-8 py-3 rounded-xl font-black text-sm shadow-xl shadow-secondary/10 hover:shadow-gold/20 transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2"
                                                 >
                                                     <span>تأكيد ومتابعة</span>
                                                     <ArrowLeft size={16} />
@@ -1102,22 +1102,22 @@ const BookingPage = () => {
                                     <button
                                         onClick={handlePayment}
                                         disabled={isLoading}
-                                        className="w-full bg-secondary text-white py-5 rounded-2xl font-black text-lg transition-all shadow-[0_20px_40px_-10px_rgba(15,23,42,0.3)] hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-4 relative overflow-hidden group"
+                                        className="w-full bg-secondary text-white py-4 md:py-5 rounded-2xl font-black text-base md:text-lg transition-all shadow-[0_20px_40px_-10px_rgba(15,23,42,0.3)] hover:scale-[1.01] active:scale-[0.98] flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 relative overflow-hidden group px-4"
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
 
                                         {isLoading ? (
                                             <>
-                                                <Loader2 className="w-6 h-6 animate-spin text-gold" />
-                                                <span className="relative z-10">جاري توثيق العملية...</span>
+                                                <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin text-gold" />
+                                                <span className="relative z-10 text-center">جاري توثيق العملية...</span>
                                             </>
                                         ) : (
                                             <>
-                                                <ShieldCheck size={22} className="text-gold" />
-                                                <span className="relative z-10">
+                                                <ShieldCheck size={20} className="text-gold md:w-[22px] md:h-[22px]" />
+                                                <span className="relative z-10 text-center leading-tight">
                                                     {isLoggedIn ? 'تأكيد الحجز والدفع النهائي' : 'توثيق البيانات وتأكيد الدفع'}
                                                 </span>
-                                                <ArrowLeft size={22} className="group-hover:-translate-x-2 transition-transform" />
+                                                <ArrowLeft size={20} className="group-hover:-translate-x-2 transition-transform md:w-[22px] md:h-[22px]" />
                                             </>
                                         )}
                                     </button>

@@ -231,7 +231,7 @@ const Profile = () => {
 
                         {/* Bookings Content */}
                         {activeTab === 'bookings' && (
-                            <div className={`space-y-6 animate-fade-in-up transition-all ${!isLoggedIn ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                            <div className={`space-y-6 animate-fade-in-up transition-all ${!isLoggedIn ? 'opacity-30 select-none pointer-events-none grayscale' : ''}`}>
                                 <h2 className="text-2xl font-black text-text mb-6 flex items-center gap-2">
                                     <Calendar size={28} className="text-gold" />
                                     حجوزاتي ({bookings.length})
@@ -303,7 +303,7 @@ const Profile = () => {
 
                         {/* Favorites Content */}
                         {activeTab === 'favorites' && (
-                            <div className={`space-y-6 animate-fade-in-up transition-all ${!isLoggedIn ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                            <div className={`space-y-6 animate-fade-in-up transition-all ${!isLoggedIn ? 'opacity-30 select-none pointer-events-none grayscale' : ''}`}>
                                 <h2 className="text-2xl font-black text-text mb-6 flex items-center gap-2">
                                     <Heart size={28} className="text-gold" />
                                     المفضلة ({favorites.length})
@@ -331,7 +331,7 @@ const Profile = () => {
 
                         {/* Account Settings Content */}
                         {activeTab === 'account' && (
-                            <div className={`bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-fade-in-up transition-all ${!isLoggedIn ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                            <div className={`bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-fade-in-up transition-all ${!isLoggedIn ? 'opacity-30 select-none pointer-events-none grayscale' : ''}`}>
                                 <h2 className="text-2xl font-black text-text mb-8 flex items-center gap-2">
                                     <Settings size={28} className="text-gold" />
                                     الإعدادات الشخصية
