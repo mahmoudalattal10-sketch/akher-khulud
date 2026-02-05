@@ -2,6 +2,7 @@
 import React from 'react';
 import { BookingDetails, BookingStatus } from './types';
 import { ShieldCheck, CheckCircle, Clock } from 'lucide-react';
+import brandConfig from '../../config/brandConfig';
 
 interface Props {
     booking: BookingDetails;
@@ -24,10 +25,10 @@ const VoucherHeader: React.FC<Props> = ({ booking, status }) => {
                             {/* Logo Section */}
                             <div className="flex items-center">
                                 <img
-                                    src="https://i.postimg.cc/hj4pmkmc/llsfr-walsyaht-(1).png"
-                                    alt="Diafat Khulud"
+                                    src={brandConfig.logo.primary}
+                                    alt={brandConfig.brandName}
                                     className="h-24 w-auto object-contain"
-                                    crossOrigin="anonymous"
+                                // crossOrigin="anonymous" // Removed as local assets don't need this, unless using external URL in config
                                 />
                             </div>
 

@@ -1,11 +1,11 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { User, LogOut, Shield } from 'lucide-react';
 import { useUserPreferences } from '../../contexts/UserPreferencesContext';
 import MagneticButton from './MagneticButton';
+import brandConfig from '../../config/brandConfig';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -99,7 +99,7 @@ const Navbar: React.FC = () => {
             {/* Right Side: Brand */}
             <div className="flex-1 flex items-center justify-start">
               <Link to="/" className={`transition-all duration-700 ${isScrolled ? 'scale-[0.85]' : 'scale-[1.0]'}`}>
-                <img src="/assets/images/ui/logo.png" alt="Logo" className="h-16 lg:h-20 w-auto" fetchPriority="high" />
+                <img src={brandConfig.logo.primary} alt={brandConfig.brandName} className="h-16 lg:h-20 w-auto" fetchPriority="high" />
               </Link>
             </div>
 
@@ -175,7 +175,7 @@ const Navbar: React.FC = () => {
 
           {/* Logo Section - اللوجو فقط على اليمين */}
           <Link to="/" className="flex items-center transition-transform active:scale-95">
-            <img src="/assets/images/ui/logo.png" alt="Logo" className="h-14 w-auto" fetchPriority="high" />
+            <img src={brandConfig.logo.primary} alt={brandConfig.brandName} className="h-14 w-auto" fetchPriority="high" />
           </Link>
 
           {/* Burger Menu Button - بدون دائرة خلفية */}
@@ -219,7 +219,7 @@ const Navbar: React.FC = () => {
             </div>
             <div className="mt-auto pt-8 border-t border-slate-100">
               <div className="w-full bg-primary text-white font-black py-5 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.1)] flex items-center justify-center gap-3">
-                ضيافة خلود 2026
+                {brandConfig.brandName} 2026
               </div>
             </div>
           </div>

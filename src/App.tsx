@@ -13,6 +13,8 @@ import { AboutContent, FAQContent, PrivacyContent, TermsContent } from './featur
 import SmoothScrollProvider from './features/ui/SmoothScrollProvider';
 import Preloader from './features/ui/Preloader';
 import PageTransition from './features/ui/PageTransition';
+import { ThemeInjector } from './components/ThemeInjector';
+import brandConfig from './config/brandConfig';
 
 // 🛡️ Global Error Boundary to prevent blank pages
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -162,6 +164,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-luxury-bg selection:bg-gold/10 selection:text-gold-dark text-right" dir="rtl">
       <Preloader />
+      <ThemeInjector />
       {!shouldHideNavbar && <Navbar />}
       <main className="flex-grow">
         <ErrorBoundary>
@@ -185,7 +188,7 @@ const App: React.FC = () => {
                   <Route path="/payment/callback" element={<PageWrapper><PaymentCallback /></PageWrapper>} />
 
                   {/* Static Pages */}
-                  <Route path="/about" element={<PageWrapper><StaticPage title="من نحن" subtitle="قصة ضيافة خلود.. رحلة من التميز في الضيافة إلى العالم." icon={Users} content={<AboutContent />} /></PageWrapper>} />
+                  <Route path="/about" element={<PageWrapper><StaticPage title="من نحن" subtitle={`قصة ${brandConfig.brandName}.. رحلة من التميز في الضيافة إلى العالم.`} icon={Users} content={<AboutContent />} /></PageWrapper>} />
                   <Route path="/team" element={<PageWrapper><StaticPage title="فريق العمل" subtitle="نخبـة من الخبراء في مجال الضيافة والخدمات الفاخرة." icon={Users} content={<AboutContent />} /></PageWrapper>} />
                   <Route path="/jobs" element={<PageWrapper><StaticPage title="الوظائف" subtitle="انضم إلينا وكن جزءاً من قصة نجاحنا." icon={Briefcase} /></PageWrapper>} />
                   <Route path="/partners" element={<PageWrapper><StaticPage title="شركاء النجاح" subtitle="نفخر بشراكتنا مع كبرى الفنادق وشركات الخدمات." icon={Users} /></PageWrapper>} />

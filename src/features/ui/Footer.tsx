@@ -1,5 +1,7 @@
+
 import { Mail, ArrowRight, Instagram, Twitter, Facebook, Linkedin, Phone, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import brandConfig from '../../config/brandConfig';
 
 export default function Footer() {
   return (
@@ -40,9 +42,9 @@ export default function Footer() {
                 <ArrowRight size={22} className="transition-transform group-hover:translate-x-1" />
               </button>
               <button className="w-full sm:w-auto px-8 py-4 bg-emerald-900/40 hover:bg-emerald-900/60 backdrop-blur-md text-white font-bold rounded-2xl border border-white/20 transition-all hover:scale-105 active:scale-90">
-                <a href="https://wa.me/966553882445" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href={`https://wa.me/${brandConfig.contact.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <span>تواصل واتساب:</span>
-                  <span dir="ltr" className="inline-block tracking-normal">+966 55 388 2445</span>
+                  <span dir="ltr" className="inline-block tracking-normal">{brandConfig.contact.phone}</span>
                 </a>
               </button>
             </div>
@@ -57,23 +59,23 @@ export default function Footer() {
 
             {/* Col 1: Branding & Contact */}
             <div className="flex flex-col gap-6">
-              <img src="/assets/images/ui/logo.png" alt="Diafat Khulud" className="h-40 w-auto object-contain self-start -mt-4" />
+              <img src={brandConfig.logo.primary} alt={brandConfig.brandName} className="h-20 w-auto object-contain self-start -mt-4" />
               <p className="text-gray-500 text-sm leading-relaxed font-medium">
                 نسعى لتقديم أرقى خدمات الضيافة للمسافرين حول العالم، مع باقات متنوعة تناسب كافة الاحتياجات.
               </p>
 
               <div className="flex flex-col gap-3">
-                <a href="https://wa.me/966553882445" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-700 hover:text-gold-dark transition-colors group">
+                <a href={`https://wa.me/${brandConfig.contact.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-700 hover:text-gold-dark transition-colors group">
                   <div className="w-8 h-8 rounded-full bg-gold-50 text-gold flex items-center justify-center group-hover:bg-gold group-hover:text-white transition-all">
                     <Phone size={14} />
                   </div>
-                  <span dir="ltr" className="font-bold font-mono text-base inline-block tracking-normal">+966 55 388 2445</span>
+                  <span dir="ltr" className="font-bold font-mono text-base inline-block tracking-normal">{brandConfig.contact.phone}</span>
                 </a>
-                <a href="mailto:Diyafaat.khulood@outlook.sa" className="flex items-center gap-2 text-gray-700 hover:text-gold-dark transition-colors group">
+                <a href={`mailto:${brandConfig.contact.email}`} className="flex items-center gap-2 text-gray-700 hover:text-gold-dark transition-colors group">
                   <div className="w-8 h-8 rounded-full bg-gold-50 text-gold flex items-center justify-center group-hover:bg-gold group-hover:text-white transition-all">
                     <Mail size={14} />
                   </div>
-                  <span className="font-bold text-sm">Diyafaat.khulood@outlook.sa</span>
+                  <span className="font-bold text-sm">{brandConfig.contact.email}</span>
                 </a>
               </div>
             </div>
@@ -141,11 +143,11 @@ export default function Footer() {
           {/* Footer Bottom */}
           <div className="mt-12 pt-6 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-gray-400 text-sm font-medium flex flex-wrap items-center gap-2">
-              © 2026 جميع الحقوق محفوظة لـ <span className="text-gold-dark font-bold">ضيافة خلود</span>.
+              © 2026 جميع الحقوق محفوظة لـ <span className="text-gold-dark font-bold">{brandConfig.brandName}</span>.
               <span className="hidden md:inline text-slate-300">|</span>
-              <a href="https://wa.me/201018565155" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors flex items-center gap-1 group">
+              <a href="#" className="hover:text-gold transition-colors flex items-center gap-1 group">
                 <span className="text-xs">تم التطوير بواسطة</span>
-                <span dir="ltr" className="font-bold text-slate-500 group-hover:text-gold transition-colors">elattal co.</span>
+                <span dir="ltr" className="font-bold text-slate-500 group-hover:text-gold transition-colors">Digital Solutions</span>
               </a>
             </p>
             <div className="flex gap-6 text-xs text-gray-400 font-medium">
