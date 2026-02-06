@@ -201,32 +201,7 @@ const Hotels = () => {
         { id: 'rating', label: 'الأعلى تقييماً' },
     ];
 
-    // Reveal on scroll refs
-    const revealRefs = useRef<HTMLDivElement[]>([]);
-    const addToRevealRefs = (el: HTMLDivElement) => {
-        if (el && !revealRefs.current.includes(el)) {
-            revealRefs.current.push(el);
-        }
-    };
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('active');
-                    }
-                });
-            },
-            { threshold: 0.1 }
-        );
-
-        revealRefs.current.forEach((el) => observer.observe(el));
-
-        return () => {
-            revealRefs.current.forEach((el) => observer.unobserve(el));
-        };
-    }, [filteredHotels]);
+    // [CLEANUP] Removed IntersectionObserver logic in favor of CSS Animations
 
     useEffect(() => {
         if (showMobileFilters) {
@@ -511,8 +486,8 @@ const Hotels = () => {
                                 filteredHotels.map((hotel, index) => (
                                     <div
                                         key={hotel.id}
-                                        ref={addToRevealRefs}
-                                        className="reveal-on-scroll transform will-change-[transform,opacity] transition-[opacity,transform] duration-500 translate-y-4 opacity-0"
+                                        style={{ animationDelay: `${index * 50}ms` }}
+                                        className="animate-fadeInUp opacity-0 fill-mode-forwards"
                                     >
                                         <HotelCard hotel={hotel} index={index} />
                                     </div>
@@ -663,7 +638,7 @@ const Hotels = () => {
                                 onClick={() => setShowMobileFilters(false)}
                                 className="flex-[2] bg-secondary text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-secondary/20 active:scale-95 transition-transform"
                             >
-                                تطبيق الفلاتر
+                                عرض {filteredHotels.length} فندق
                             </button>
                         </div>
                     </div>
@@ -671,9 +646,21 @@ const Hotels = () => {
             </div>
 
             <style>{`
-                .reveal-on-scroll.active {
-                    opacity: 1;
-                    transform: translateY(0);
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                .animate-fadeInUp {
+                    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .fill-mode-forwards {
+                    animation-fill-mode: forwards;
                 }
             `}</style>
         </div>

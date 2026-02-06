@@ -435,11 +435,29 @@ class Hotel {
     public function findByIds($ids) {
         if (empty($ids)) return [];
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        // Ensure we only get active hotels
         $sql = "SELECT * FROM Hotel WHERE id IN ($placeholders) AND isVisible = 1";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($ids);
         $hotels = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return array_map([$this, 'formatHotel'], $hotels);
+
+        if (empty($hotels)) return [];
+
+        // 🚀 Optimization: Batch Load Relations to avoid N+1 Queries
+        $foundIds = array_column($hotels, 'id');
+        $allImages = $this->batchGetImages($foundIds);
+        $allAmenities = $this->batchGetAmenities($foundIds);
+
+        foreach ($hotels as &$hotel) {
+            $hotel['images'] = $allImages[$hotel['id']] ?? [];
+            $hotel['amenities'] = $allAmenities[$hotel['id']] ?? [];
+            
+            // Use simple formatter which handles type casting but assumes relations are manually attached
+            // (Same efficient path used by findAll)
+            $hotel = $this->formatHotelSimple($hotel);
+        }
+
+        return $hotels;
     }
 
     private function formatHotel($hotel) {

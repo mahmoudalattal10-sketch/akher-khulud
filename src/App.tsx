@@ -103,12 +103,12 @@ const PaymentCallback = lazy(() => import('./pages/PaymentCallback'));
 const CompareHotels = lazy(() => import('./pages/CompareHotels'));
 import ComparisonBar from './features/ui/ComparisonBar';
 
-import { useLenis } from '@studio-freight/react-lenis';
+
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const lenis = useLenis();
+
 
   // 🔄 Smart Hash Redirect Fix
   useEffect(() => {
@@ -129,11 +129,8 @@ const ScrollToTop = () => {
       window.scrollTo(0, 0);
     }
 
-    // 2. Lenis Scroll Reset (Critical for smooth scroll)
-    if (lenis) {
-      lenis.scrollTo(0, { immediate: true });
-    }
-  }, [pathname, lenis]);
+
+  }, [pathname]);
 
   return null;
 };

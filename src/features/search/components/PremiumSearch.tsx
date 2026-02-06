@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSearch } from '../../../contexts/SearchContext';
 import { Star, MapPin, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, AlertCircle, X, Search, Sparkles, Wifi, Utensils, Car, Coffee, Shield, Globe, Compass, ChevronDown, ChevronUp, Building, Plus, Minus } from 'lucide-react';
 import { useSearchLogic, SheetType } from '../hooks/useSearchLogic';
@@ -17,6 +17,10 @@ interface PremiumSearchProps {
 }
 
 const PremiumSearch: React.FC<PremiumSearchProps> = ({ onSearch, className = "", initialCity = "", hideAiToggle = false, disableScroll = false }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const isHotelsPage = location.pathname.includes('/hotels');
+
     const {
         searchData,
         updateSearch,
@@ -44,8 +48,38 @@ const PremiumSearch: React.FC<PremiumSearchProps> = ({ onSearch, className = "",
         }
     }, [searchData.destination]);
 
+    // [AUTO-SEARCH] Trigger search automatically when on Hotels page
+    useEffect(() => {
+        if (!isHotelsPage) return;
+
+        // Debounce to avoid rapid reloads
+        const timer = setTimeout(() => {
+            // Only search if we have a valid destination and valid date range (if dates are partially selected)
+            // Note: If dates are null, it's fine (search all). But if checkIn is set but checkOut is missing, wait.
+            const isDatePartial = searchData.checkIn && !searchData.checkOut;
+            if (searchData.destination && !isDatePartial) {
+                if (onSearch) {
+                    onSearch({
+                        city: searchData.destination,
+                        checkIn: searchData.checkIn,
+                        checkOut: searchData.checkOut,
+                        guests: {
+                            adults: searchData.adults || 0,
+                            children: searchData.children || 0,
+                            rooms: searchData.rooms || 0
+                        }
+                    });
+                }
+            }
+        }, 500); // 500ms debounce for snappier experience
+
+        return () => clearTimeout(timer);
+    }, [searchData, isHotelsPage, onSearch]);
+
     // Handle clicks outside the search bar to close sheets
     useEffect(() => {
+        if (activeSheet !== 'none') return; // Don't block inside interactions
+        // ... (Click outside logic handled by popup wrapper usually, but here we kept original logic structure)
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 closeSheet();
@@ -53,7 +87,7 @@ const PremiumSearch: React.FC<PremiumSearchProps> = ({ onSearch, className = "",
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [activeSheet]);
 
     // Smart Scroll Effect for PremiumSearch
     useEffect(() => {

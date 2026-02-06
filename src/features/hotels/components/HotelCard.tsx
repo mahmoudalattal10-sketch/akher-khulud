@@ -105,13 +105,12 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
     <Link to={`/hotel/${hotel.slug || hotel.id}`} className={`block group ${offerMode ? 'h-full' : 'mb-8'}`}>
       <div
         ref={cardRef}
-        className={`relative bg-white md:bg-white/40 md:backdrop-blur-md rounded-[2rem] md:rounded-[2.8rem] border border-slate-100 md:border-white/40 shadow-sm md:shadow-[0_8px_32px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-700 hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] hover:-translate-y-2 flex flex-col ${offerMode ? 'h-full' : 'md:flex-row'} gap-0 ${offerMode ? '' : 'md:gap-8'} p-3 md:p-4 ${isVisible ? 'animate-ios-slide' : 'opacity-0'} will-change-transform`}
+        className={`relative bg-white md:bg-white/95 rounded-[2rem] md:rounded-[2.8rem] border border-slate-100 md:border-white/40 shadow-sm md:shadow-[0_8px_32px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-700 hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] hover:-translate-y-2 flex flex-col ${offerMode ? 'h-full' : 'md:flex-row'} gap-0 ${offerMode ? '' : 'md:gap-8'} p-3 md:p-4 ${isVisible ? 'animate-ios-slide' : 'opacity-0'} will-change-transform`}
         style={{ animationDelay: `${(index % 3) * 150}ms` }}
       >
         {/* 1. IMAGE SECTION (Adaptive) */}
         <div className={`w-full ${offerMode ? 'aspect-[4/3] h-[200px]' : 'md:w-[380px] lg:w-[440px] aspect-[4/3] md:aspect-auto md:h-[320px]'} rounded-[1.8rem] md:rounded-[2.2rem] overflow-hidden relative shrink-0 shadow-md md:shadow-2xl`}>
           <motion.img
-            layoutId={window.innerWidth > 768 ? `hotel-image-${hotel.id}` : undefined}
             transition={{ duration: 0.6, ease: [0.43, 0.13, 0.23, 0.96] }}
             src={getImageUrl(hotel.image)}
             alt={hotel.name}
@@ -127,13 +126,13 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
           <div className="absolute top-4 right-4 z-30 flex flex-col gap-2">
             <button
               onClick={(e) => handleAction(e, () => toggleFavorite(hotel.id))}
-              className={`w-9 h-9 rounded-full backdrop-blur-md border shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isFavorite(hotel.id) ? 'bg-rose-500 border-rose-400 text-white' : 'bg-white/30 border-white/40 text-white hover:bg-white hover:text-rose-500'}`}
+              className={`w-9 h-9 rounded-full border shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isFavorite(hotel.id) ? 'bg-rose-500 border-rose-400 text-white' : 'bg-white/80 border-white/40 text-slate-700 hover:bg-white hover:text-rose-500'}`}
             >
               <Heart size={18} className={isFavorite(hotel.id) ? 'fill-current' : ''} />
             </button>
             <button
               onClick={(e) => handleAction(e, () => toggleCompare(hotel.id))}
-              className={`w-9 h-9 rounded-full backdrop-blur-md border shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isInCompare(hotel.id) ? 'bg-gold border-gold text-white' : 'bg-white/30 border-white/40 text-white hover:bg-white hover:text-gold'}`}
+              className={`w-9 h-9 rounded-full border shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isInCompare(hotel.id) ? 'bg-gold border-gold text-white' : 'bg-white/80 border-white/40 text-slate-700 hover:bg-white hover:text-gold'}`}
             >
               <Scale size={18} />
             </button>
@@ -173,7 +172,7 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
 
                 if (meta) {
                   return (
-                    <div className="w-full mb-4 bg-amber-50/70 backdrop-blur-md border border-amber-200/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border-r-4 border-r-amber-400 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="w-full mb-4 bg-amber-50 border border-amber-200/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border-r-4 border-r-amber-400 animate-in fade-in slide-in-from-top-2 duration-500">
                       <div className="flex items-center gap-4">
                         <div>
                           <h5 className="text-sm font-black text-amber-900 leading-tight mb-0.5">متاح لفترة جزئية</h5>
@@ -199,7 +198,7 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
 
                 // Fallback if no specific dates found (e.g. legacy data)
                 return (
-                  <div className="w-full mb-4 bg-amber-50/70 backdrop-blur-md border border-amber-200/50 rounded-2xl p-4 flex items-center gap-4 border-r-4 border-r-amber-400 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="w-full mb-4 bg-amber-50 border border-amber-200/50 rounded-2xl p-4 flex items-center gap-4 border-r-4 border-r-amber-400 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
                     <div>
                       <p className="text-sm font-black text-amber-900 leading-tight mb-0.5">متاح لفترة جزئية</p>
                       <p className="text-[11px] font-bold text-amber-700/80">يرجى التحقق من التواريخ المتاحة</p>

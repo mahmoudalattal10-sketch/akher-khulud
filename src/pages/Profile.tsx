@@ -56,10 +56,16 @@ const Profile = () => {
     }, []);
 
     useEffect(() => {
+        // ⚡ Smart Caching: Only fetch if data is missing or out of sync with favorites list
         if (activeTab === 'favorites' && favorites.length > 0) {
-            loadFavorites();
+            const hasData = favoriteHotels.length > 0;
+            const isSync = favoriteHotels.length === favorites.length && favoriteHotels.every(h => favorites.includes(h.id));
+
+            if (!hasData || !isSync) {
+                loadFavorites();
+            }
         }
-    }, [activeTab, favorites]);
+    }, [activeTab, favorites]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
     const loadFavorites = async () => {
         setLoadingFavorites(true);
@@ -170,7 +176,7 @@ const Profile = () => {
 
                 {/* Header Welcome Card */}
                 <div className="bg-primary rounded-[3rem] p-8 md:p-12 mb-10 relative overflow-hidden shadow-2xl text-white">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="flex items-center gap-6">
                             <div className="w-24 h-24 rounded-full bg-primary border-4 border-gold-dark/50 flex items-center justify-center shadow-inner">

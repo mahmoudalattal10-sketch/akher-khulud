@@ -127,6 +127,7 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({
                                     destination={destination}
                                     setDestination={(v) => { setDestination(v); updateSearch({ destination: v }); setStep('dates'); }}
                                     closeSheet={onClose}
+                                    disableAutoClose={true}
                                 />
                             )}
 

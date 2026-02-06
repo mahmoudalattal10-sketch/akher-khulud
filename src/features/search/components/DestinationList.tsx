@@ -8,9 +8,10 @@ interface DestinationListProps {
     destination: string;
     setDestination: (v: string) => void;
     closeSheet: () => void;
+    disableAutoClose?: boolean;
 }
 
-const DestinationList: React.FC<DestinationListProps> = ({ destination, setDestination, closeSheet }) => {
+const DestinationList: React.FC<DestinationListProps> = ({ destination, setDestination, closeSheet, disableAutoClose = false }) => {
     const [search, setSearch] = useState('');
     const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
     const navigate = useNavigate();
@@ -138,7 +139,11 @@ const DestinationList: React.FC<DestinationListProps> = ({ destination, setDesti
                                     {filteredTop.map(city => (
                                         <button
                                             key={city}
-                                            onClick={(e) => { e.stopPropagation(); setDestination(city); closeSheet(); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDestination(city);
+                                                if (!disableAutoClose) closeSheet();
+                                            }}
                                             className={`w-full text-right p-4 rounded-[1.8rem] transition-all flex items-center justify-between group active:scale-[0.97] ${destination === city ? 'bg-secondary text-white shadow-lg' : 'bg-white/50 hover:bg-white border border-transparent backdrop-blur-sm'}`}
                                         >
                                             <div className={`p-2 rounded-xl ${destination === city ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-gold/10'}`}>
@@ -177,7 +182,11 @@ const DestinationList: React.FC<DestinationListProps> = ({ destination, setDesti
                                                 {country.cities.map(city => (
                                                     <button
                                                         key={city}
-                                                        onClick={(e) => { e.stopPropagation(); setDestination(city); closeSheet(); }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setDestination(city);
+                                                            if (!disableAutoClose) closeSheet();
+                                                        }}
                                                         className={`w-full text-right p-4 rounded-[1.8rem] transition-all flex items-center justify-between group active:scale-[0.97] ${destination === city ? 'bg-secondary text-white shadow-lg' : 'bg-white/50 hover:bg-white border border-transparent backdrop-blur-sm'}`}
                                                     >
                                                         <div className={`p-2 rounded-xl ${destination === city ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-gold/10'}`}>

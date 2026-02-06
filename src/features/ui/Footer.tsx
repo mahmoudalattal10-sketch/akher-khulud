@@ -41,9 +41,9 @@ export default function Footer() {
                 <span>ابدأ تخطيط رحلتك</span>
                 <ArrowRight size={22} className="transition-transform group-hover:translate-x-1" />
               </button>
-              <button className="w-full sm:w-auto px-8 py-4 bg-emerald-900/40 hover:bg-emerald-900/60 backdrop-blur-md text-white font-bold rounded-2xl border border-white/20 transition-all hover:scale-105 active:scale-90">
-                <a href={`https://wa.me/${brandConfig.contact.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                  <span>تواصل واتساب:</span>
+              <button className="w-full sm:w-auto px-5 sm:px-8 py-4 bg-emerald-900/40 hover:bg-emerald-900/60 backdrop-blur-md text-white font-bold rounded-2xl border border-white/20 transition-all hover:scale-105 active:scale-90 text-sm sm:text-base">
+                <a href={`https://wa.me/${brandConfig.contact.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 whitespace-nowrap">
+                  <span>تواصل واتساب</span>
                   <span dir="ltr" className="inline-block tracking-normal">{brandConfig.contact.phone}</span>
                 </a>
               </button>
@@ -145,9 +145,9 @@ export default function Footer() {
             <p className="text-gray-400 text-sm font-medium flex flex-wrap items-center gap-2">
               © 2026 جميع الحقوق محفوظة لـ <span className="text-gold-dark font-bold">{brandConfig.brandName}</span>.
               <span className="hidden md:inline text-slate-300">|</span>
-              <a href="#" className="hover:text-gold transition-colors flex items-center gap-1 group">
+              <a href="https://wa.me/201018565155" target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors flex items-center gap-1 group">
                 <span className="text-xs">تم التطوير بواسطة</span>
-                <span dir="ltr" className="font-bold text-slate-500 group-hover:text-gold transition-colors">Digital Solutions</span>
+                <span dir="ltr" className="font-bold text-slate-500 group-hover:text-gold transition-colors">elattal co.</span>
               </a>
             </p>
             <div className="flex gap-6 text-xs text-gray-400 font-medium">

@@ -278,8 +278,8 @@ const Auth = () => {
                 {/* Info Side (Gold Panel) */}
                 <div className="p-8 lg:p-16 flex flex-col justify-center order-1 lg:order-2 bg-gradient-to-br from-gold to-gold-dark relative overflow-hidden min-h-[400px] lg:min-h-0">
                     {/* Background Effects */}
-                    <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-                    <div className="absolute bottom-[-20%] right-[-20%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+                    <div className="absolute bottom-[-20%] right-[-20%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
 
                     <div className="relative z-10 flex flex-col h-full justify-center">
                         {/* Icon */}
