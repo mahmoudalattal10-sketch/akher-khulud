@@ -1074,23 +1074,10 @@ const BookingPage = () => {
                                             </span>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
-                                            <div className="flex items-center gap-3">
-                                                {/* Official Visa Logo */}
-                                                <div className="bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-100 flex items-center justify-center h-[32px]">
-                                                    <img
-                                                        src="https://upload.wikimedia.org/wikipedia/commons/d/d6/Visa_2021.svg"
-                                                        alt="Visa"
-                                                        className="h-3 w-auto object-contain"
-                                                    />
-                                                </div>
-                                                {/* Official Mastercard Logo */}
-                                                <div className="bg-white px-2 py-1.5 rounded-xl shadow-sm border border-slate-100 flex items-center justify-center h-[32px]">
-                                                    <img
-                                                        src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg"
-                                                        alt="Mastercard"
-                                                        className="h-5 w-auto object-contain"
-                                                    />
-                                                </div>
+                                            <div className="flex items-center gap-4">
+                                                <img src="/assets/images/ui/visa-logo.png" alt="Visa" className="h-12 w-auto object-contain" />
+                                                <img src="/assets/images/ui/mastercard-logo.png" alt="Mastercard" className="h-[18px] w-auto object-contain" />
+                                                <img src="/assets/images/ui/mada-logo.png" alt="مدى Mada" className="h-12 w-auto object-contain" />
                                             </div>
                                             <span className="text-[9px] font-black text-slate-400 uppercase">الدفع عبر بوابات دفع دولية آمنة</span>
                                         </div>

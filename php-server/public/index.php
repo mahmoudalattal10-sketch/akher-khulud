@@ -160,6 +160,7 @@ $router->get('/api/admin/pilgrims', [AdminController::class, 'getPilgrims']);
 $router->get('/api/admin/notifications', [AdminController::class, 'getNotifications']);
 $router->put('/api/admin/notifications/{id}/read', [AdminController::class, 'markNotificationAsRead']);
 $router->post('/api/admin/update-credentials', [AdminController::class, 'updateCredentials']);
+$router->get('/api/admin/download-db', [AdminController::class, 'downloadDatabase']);
 
 // Review Routes
 $router->get('/api/hotels/{id}/reviews', [ReviewController::class, 'index']);

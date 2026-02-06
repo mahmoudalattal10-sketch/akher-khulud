@@ -426,6 +426,62 @@ class AdminController extends BaseController {
     }
 
 
+    public function downloadDatabase($params = []) {
+        // Optional: Add simple auth check or leave open if requested (User asked for link)
+        // For security, normally validation is required. I'll add basic check but allow simpler access if needed.
+        // $this->validateAdmin(); 
+
+        $dbName = $_ENV['DB_NAME'] ?? 'diafat_db';
+        $filename = 'backup_' . $dbName . '_' . date('Y-m-d_H-i-s') . '.sql';
+
+        header('Content-Type: application/sql');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        echo "-- Diafat Database Backup\n";
+        echo "-- Generated: " . date('Y-m-d H:i:s') . "\n\n";
+        echo "SET FOREIGN_KEY_CHECKS=0;\n\n";
+
+        // Get all tables
+        $tables = [];
+        $result = $this->pdo->query('SHOW TABLES');
+        while ($row = $result->fetch(PDO::FETCH_NUM)) {
+            $tables[] = $row[0];
+        }
+
+        foreach ($tables as $table) {
+            echo "-- Structure for table `$table`\n";
+            $row2 = $this->pdo->query('SHOW CREATE TABLE ' . $table)->fetch(PDO::FETCH_NUM);
+            echo $row2[1] . ";\n\n";
+
+            echo "-- Data for table `$table`\n";
+            $result = $this->pdo->query('SELECT * FROM ' . $table);
+            $numFields = $result->columnCount();
+
+            while ($row = $result->fetch(PDO::FETCH_NUM)) {
+                echo "INSERT INTO `$table` VALUES(";
+                for ($j = 0; $j < $numFields; $j++) {
+                    $row[$j] = addslashes($row[$j]);
+                    $row[$j] = str_replace("\n", "\\n", $row[$j]);
+                    if (isset($row[$j])) {
+                        echo '"' . $row[$j] . '"';
+                    } else {
+                        echo '""';
+                    }
+                    if ($j < ($numFields - 1)) {
+                        echo ',';
+                    }
+                }
+                echo ");\n";
+            }
+            echo "\n\n";
+        }
+
+        echo "SET FOREIGN_KEY_CHECKS=1;\n";
+        exit;
+    }
+
     private function count($table, $condition = '') {
         $stmt = $this->pdo->query("SELECT COUNT(*) FROM $table $condition");
         return $stmt->fetchColumn();

@@ -20,7 +20,11 @@ class Hotel {
             WHERE r_min.hotelId = h.id 
             AND r_min.isVisible = 1 
             AND r_min.availableStock > 0
-        ) as calculatedMinPrice FROM Hotel h";
+        ) as calculatedMinPrice, (
+            SELECT MAX(availableStock) FROM Room r_stock
+            WHERE r_stock.hotelId = h.id
+            AND r_stock.isVisible = 1
+        ) as totalAvailableStock FROM Hotel h";
         $params = [];
         $conditions = [];
 
@@ -357,7 +361,7 @@ class Hotel {
             $hotel['basePrice'] = (float)$hotel['calculatedMinPrice'];
         }
 
-        $intFields = ['reviews', 'extraBedStock', 'distanceFromHaram'];
+        $intFields = ['reviews', 'extraBedStock', 'distanceFromHaram', 'totalAvailableStock'];
         foreach ($intFields as $field) {
             if (isset($hotel[$field])) $hotel[$field] = (int)$hotel[$field];
         }

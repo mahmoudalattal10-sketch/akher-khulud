@@ -108,18 +108,22 @@ import ComparisonBar from './features/ui/ComparisonBar';
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const hashRedirectDone = React.useRef(false);
 
 
-  // 🔄 Smart Hash Redirect Fix
+  // 🔄 Smart Hash Redirect Fix (Run ONLY once on initial mount)
   useEffect(() => {
+    if (hashRedirectDone.current) return; // Already processed
+
     if (window.location.hash) {
       const hashPath = window.location.hash.replace(/^#/, '');
       if (hashPath.startsWith('/') && hashPath !== '/') {
         console.log('Detected hash path, redirecting to:', hashPath);
+        hashRedirectDone.current = true; // Mark as done BEFORE navigating
         navigate(hashPath, { replace: true });
       }
     }
-  }, [navigate]);
+  }, []); // Empty deps: run only on initial mount
 
   useEffect(() => {
     // 1. Native Scroll Reset

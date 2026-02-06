@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Hotel as ApiHotel } from '../../../services/api';
 import { Hotel as LegacyHotel } from '../../../types';
 import { useUserPreferences } from '../../../contexts/UserPreferencesContext';
+import { useSearch, formatDateArabic } from '../../../contexts/SearchContext';
 import { getImageUrl } from '../../../utils/imageHelper';
 import { formatHotelDistance } from '../../../utils/formatters';
 import { Star, MapPin, Heart, Scale, Shield, CheckCircle2, ChevronLeft, Wifi, Car, Waves, Dumbbell, Utensils, Plane, Sparkles, Bell, Gamepad2, Briefcase, Shirt, UserCheck, Coffee, Key, Eye, Bus, Info, Building, Store, MessageCircle } from 'lucide-react';
@@ -48,6 +49,7 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
   const [isVisible, setIsVisible] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toggleFavorite, isFavorite, toggleCompare, isInCompare } = useUserPreferences();
+  const navigate = useNavigate();
 
   // Debug logs removed
 
@@ -71,6 +73,7 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
     return (
       <div
         ref={cardRef}
+        onClick={() => navigate(`/hotel/${hotel.slug || hotel.id}`)}
         className={`flex gap-4 p-4 glass-surface rounded-[2.2rem] active:scale-[0.98] transition-all duration-500 cursor-pointer hover:border-gold/30 hover:shadow-xl group ${isVisible ? 'animate-ios-slide' : 'opacity-0'}`}
         style={{ animationDelay: `${index * 100}ms` }}
       >
@@ -102,14 +105,24 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
   }
 
   return (
-    <Link to={`/hotel/${hotel.slug || hotel.id}`} className={`block group ${offerMode ? 'h-full' : 'mb-8'}`}>
+    <div
+      className={`block group ${offerMode ? 'h-full' : 'mb-8'} relative`}
+    >
       <div
         ref={cardRef}
         className={`relative bg-white md:bg-white/95 rounded-[2rem] md:rounded-[2.8rem] border border-slate-100 md:border-white/40 shadow-sm md:shadow-[0_8px_32px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-700 hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] hover:-translate-y-2 flex flex-col ${offerMode ? 'h-full' : 'md:flex-row'} gap-0 ${offerMode ? '' : 'md:gap-8'} p-3 md:p-4 ${isVisible ? 'animate-ios-slide' : 'opacity-0'} will-change-transform`}
         style={{ animationDelay: `${(index % 3) * 150}ms` }}
       >
-        {/* 1. IMAGE SECTION (Adaptive) */}
-        <div className={`w-full ${offerMode ? 'aspect-[4/3] h-[200px]' : 'md:w-[380px] lg:w-[440px] aspect-[4/3] md:aspect-auto md:h-[320px]'} rounded-[1.8rem] md:rounded-[2.2rem] overflow-hidden relative shrink-0 shadow-md md:shadow-2xl`}>
+        {/* [DEEP SOL] Stretched Link: Covers entire card, acts as the main click target */}
+        <Link
+          to={`/hotel/${hotel.slug || hotel.id}`}
+          className="absolute inset-0 z-10"
+          aria-label={`View details for ${hotel.name}`}
+        />
+
+        {/* 1. IMAGE SECTION (Content underneath Link) */}
+        {/* pointer-events-none allows clicks to pass through to the Link */}
+        <div className={`w-full ${offerMode ? 'aspect-[4/3] h-[200px]' : 'md:w-[380px] lg:w-[440px] aspect-[4/3] md:aspect-auto md:h-[320px]'} rounded-[1.8rem] md:rounded-[2.2rem] overflow-hidden relative shrink-0 shadow-md md:shadow-2xl pointer-events-none`}>
           <motion.img
             transition={{ duration: 0.6, ease: [0.43, 0.13, 0.23, 0.96] }}
             src={getImageUrl(hotel.image)}
@@ -123,7 +136,7 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60"></div>
 
 
-          <div className="absolute top-4 right-4 z-30 flex flex-col gap-2">
+          <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
             <button
               onClick={(e) => handleAction(e, () => toggleFavorite(hotel.id))}
               className={`w-9 h-9 rounded-full border shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isFavorite(hotel.id) ? 'bg-rose-500 border-rose-400 text-white' : 'bg-white/80 border-white/40 text-slate-700 hover:bg-white hover:text-rose-500'}`}
@@ -140,7 +153,8 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
         </div>
 
         {/* 2. CONTENT SECTION */}
-        <div className="flex-1 py-4 md:py-6 px-2 md:px-0 flex flex-col justify-between text-right">
+        {/* pointer-events-none allows clicks to pass to Link. Child buttons must be pointer-events-auto */}
+        <div className="flex-1 py-4 md:py-6 px-2 md:px-0 flex flex-col justify-between text-right pointer-events-none">
           <div>
             {/* TITLE & DESCRIPTION */}
             <div className="mb-6">
@@ -167,12 +181,48 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
               {/* Partial Availability Banner (Rich Design) */}
 
               {/* Partial Availability Banner (Rich Design) */}
+
+              {/* [NEW] Stock Shortage Warning */}
+              {(() => {
+                const { searchData } = useSearch();
+                const totalStock = (hotel as any).totalAvailableStock || 0;
+                // Only show if we have stock info, requested rooms > stock, and stock > 0 (partial)
+                // If stock is 0, it wouldn't be here unless visible=1 but stock=0 logic.
+                if (!offerMode && searchData?.rooms && totalStock > 0 && searchData.rooms > totalStock) {
+                  return (
+                    <div className="relative z-20 w-full mb-4 bg-orange-50 border border-orange-200/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border-r-4 border-r-orange-400 animate-in fade-in slide-in-from-top-2 duration-500 pointer-events-auto">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <h5 className="text-sm font-black text-orange-900 leading-tight mb-0.5">عدد الغرف غير كافٍ</h5>
+                          <p className="text-[11px] font-bold text-orange-700/80">
+                            طلبت {searchData.rooms} غرف، ولكن المخزون به {totalStock} فقط
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.open(`https://wa.me/966553882445?text=${encodeURIComponent(`السلام عليكم، أحتاج حجز ${searchData.rooms} غرف في فندق ${hotel.name} ولكن الموقع يظهر توفر ${totalStock} فقط. هل يمكن المساعدة؟`)}`, '_blank');
+                        }}
+                        className="flex items-center gap-1.5 bg-orange-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-orange-600 transition-all shadow-md active:scale-95 whitespace-nowrap"
+                      >
+                        <MessageCircle size={14} />
+                        تواصل معنا للمزيد من الغرف
+                      </button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               {(hotel.partialMatch || (hotel as any).isPartial) && (() => {
                 const meta = (hotel as any).rooms?.find((r: any) => r.partialMetadata)?.partialMetadata;
 
                 if (meta) {
                   return (
-                    <div className="w-full mb-4 bg-amber-50 border border-amber-200/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border-r-4 border-r-amber-400 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="relative z-20 w-full mb-4 bg-amber-50 border border-amber-200/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border-r-4 border-r-amber-400 animate-in fade-in slide-in-from-top-2 duration-500 pointer-events-auto">
                       <div className="flex items-center gap-4">
                         <div>
                           <h5 className="text-sm font-black text-amber-900 leading-tight mb-0.5">متاح لفترة جزئية</h5>
@@ -185,6 +235,7 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
                       <button
                         onClick={(e) => {
                           e.preventDefault();
+                          e.stopPropagation();
                           window.open(`https://wa.me/966553882445?text=${encodeURIComponent(`السلام عليكم، فندق ${hotel.name} متاح من ${formatDateArabic(meta.availableFrom)} إلى ${formatDateArabic(meta.availableTo)}، هل يمكن حجزه؟`)}`, '_blank');
                         }}
                         className="flex items-center gap-1.5 bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-amber-600 transition-all shadow-md active:scale-95 whitespace-nowrap"
@@ -267,7 +318,15 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
             </div>
 
             {/* CTA */}
-            <MagneticButton className="w-auto flex items-center justify-center gap-2 bg-slate-700 text-white px-5 md:pl-8 md:pr-12 py-3 md:py-4 rounded-[1.2rem] md:rounded-[1.8rem] font-black text-[11px] md:text-sm shadow-xl transition-all duration-500 hover:bg-slate-800 hover:shadow-slate-700/30 active:scale-95 group/btn relative overflow-hidden shrink-0">
+            {/* pointer-events-auto restores clickability for this specific button on top of the ghost layer */}
+            <MagneticButton
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(`/hotel/${hotel.slug || hotel.id}`);
+              }}
+              className="relative z-20 w-auto flex items-center justify-center gap-2 bg-slate-700 text-white px-5 md:pl-8 md:pr-12 py-3 md:py-4 rounded-[1.2rem] md:rounded-[1.8rem] font-black text-[11px] md:text-sm shadow-xl transition-all duration-500 hover:bg-slate-800 hover:shadow-slate-700/30 active:scale-95 group/btn overflow-hidden shrink-0 pointer-events-auto"
+            >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
               <span>{offerMode ? 'تفاصيل' : 'عرض التفاصيل'}</span>
               <ChevronLeft size={14} className="translate-x-0 group-hover/btn:-translate-x-2 transition-transform duration-300 md:w-5 md:h-5" />
@@ -275,7 +334,7 @@ const HotelCard: React.FC<HotelCardProps> = React.memo(({ hotel, compact = false
           </div>
         </div>
       </div>
-    </Link >
+    </div >
   );
 });
 

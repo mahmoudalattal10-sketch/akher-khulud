@@ -91,6 +91,19 @@ const Contact: React.FC = () => {
                   </svg>
                 </div>
               </a>
+
+              <div className="flex items-center gap-6 justify-end group cursor-pointer">
+                <div className="text-right">
+                  <h4 className="text-white font-black text-lg group-hover:text-gold transition-colors">مقر الشركة</h4>
+                  <p className="text-slate-400 text-sm font-bold mt-1">المدينة المنورة بجانب بئر عثمان بن عفان</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 group-hover:bg-gold group-hover:border-gold transition-all duration-300 shadow-lg">
+                  <svg className="w-6 h-6 text-gold group-hover:text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 

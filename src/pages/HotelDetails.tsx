@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useHotelDetails } from '../hooks/useHotelDetails';
 import {
@@ -13,17 +13,22 @@ import HotelBookingSearch from '../features/search/components/HotelBookingSearch
 import HotelGallery from '../features/hotels/components/HotelGallery';
 import HotelGalleryModal from '../features/hotels/components/HotelGalleryModal';
 import HotelHeader from '../features/hotels/components/HotelHeader';
-import HotelFacilities from '../features/hotels/components/HotelFacilities';
-import HotelNearbyPlaces from '../features/hotels/components/HotelNearbyPlaces';
+import PageLoader from '../features/ui/PageLoader'; // Import new loader
+// import HotelFacilities from '../features/hotels/components/HotelFacilities'; // Lazy Loaded
+// import HotelNearbyPlaces from '../features/hotels/components/HotelNearbyPlaces'; // Lazy Loaded
 import HotelRooms from '../features/hotels/components/HotelRooms';
-import HotelPolicies from '../features/hotels/components/HotelPolicies';
+// import HotelPolicies from '../features/hotels/components/HotelPolicies'; // Lazy Loaded
 import MobileBookingDocker from '../features/hotels/components/MobileBookingDocker';
-import HotelFullDetails from '../features/hotels/components/HotelFullDetails';
+// import HotelFullDetails from '../features/hotels/components/HotelFullDetails'; // Lazy Loaded
 import BookingSummary from '../features/hotels/components/BookingSummary';
 
 // Lazy Load Heavy Components
 const HotelViewMap = React.lazy(() => import('../features/hotels/components/HotelViewMap'));
 const RelatedHotels = React.lazy(() => import('../features/hotels/components/RelatedHotels'));
+const HotelFacilities = React.lazy(() => import('../features/hotels/components/HotelFacilities'));
+const HotelPolicies = React.lazy(() => import('../features/hotels/components/HotelPolicies'));
+const HotelFullDetails = React.lazy(() => import('../features/hotels/components/HotelFullDetails'));
+const HotelNearbyPlaces = React.lazy(() => import('../features/hotels/components/HotelNearbyPlaces'));
 
 import { useSearch, formatDateArabic } from '../contexts/SearchContext';
 import { MEAL_PLAN_LABELS } from '../constants/hotelConstants';
@@ -160,7 +165,7 @@ const HotelDetails = () => {
         });
     }, [roomsData, searchData]);
 
-    const handleSearchUpdate = (data: any) => {
+    const handleSearchUpdate = useCallback((data: any) => {
         const newParams = new URLSearchParams(window.location.search);
 
         if (data.checkIn) {
@@ -184,21 +189,21 @@ const HotelDetails = () => {
 
         navigate(`${window.location.pathname}?${newParams.toString()}`, { replace: true });
         // refetch() will be triggered automatically as queryParams depend on URL search
-    };
+    }, [navigate]);
 
-    const handleQuantityChange = (roomId: string, delta: number, max: number) => {
+    const handleQuantityChange = useCallback((roomId: string, delta: number, max: number) => {
         setRoomQuantities(prev => ({
             ...prev,
             [roomId]: Math.max(0, Math.min((prev[roomId] || 0) + delta, max))
         }));
-    };
+    }, []);
 
-    const handleExtraBedChange = (roomId: string, delta: number, max: number) => {
+    const handleExtraBedChange = useCallback((roomId: string, delta: number, max: number) => {
         setExtraBedCounts(prev => ({
             ...prev,
             [roomId]: Math.max(0, Math.min((prev[roomId] || 0) + delta, max))
         }));
-    };
+    }, []);
 
     const [couponCode, setCouponCode] = useState(searchData.promoCode || '');
     const [couponError, setCouponError] = useState('');
@@ -296,7 +301,7 @@ const HotelDetails = () => {
         return totalAfterDiscount;
     }, [selectedRoomsSummaryMemo, nights, searchData.couponDiscount]);
 
-    const handleConfirmBooking = () => {
+    const handleConfirmBooking = useCallback(() => {
         if (selectedRoomsSummaryMemo.length === 0) return;
 
         // Pass all selected rooms to booking page
@@ -323,28 +328,22 @@ const HotelDetails = () => {
                 couponDiscount: searchData.couponDiscount
             }
         });
-    };
+    }, [selectedRoomsSummaryMemo, hotel?.id, navigate, searchData]);
 
     // Keep handleBookNow for direct "Book Now" buttons on cards if they exist (legacy support or quick action)
-    const handleBookNow = (idx: number) => {
-        const room = roomsData[idx];
-        setRoomQuantities(prev => ({ ...prev, [room.id]: 1 }));
-        // Just select it, let user confirm via summary
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+    const handleBookNow = useCallback((idx: number) => {
+        if (roomsData[idx]) {
+            const room = roomsData[idx];
+            setRoomQuantities(prev => ({ ...prev, [room.id]: 1 }));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [roomsData]);
 
     return (
         <div className="min-h-screen bg-[#F9FAFB] font-cairo text-text pb-20">
 
             {loading && !hotel ? (
-                <div className="animate-pulse">
-                    <div className="h-28" />
-                    <div className="max-w-[1400px] mx-auto px-8 py-6">
-                        <div className="w-full h-[500px] bg-slate-100 rounded-[3rem] mb-12" />
-                        <div className="h-12 w-1/2 bg-slate-100 rounded-xl mb-6" />
-                        <div className="h-40 w-full bg-slate-100 rounded-[2rem]" />
-                    </div>
-                </div>
+                <PageLoader />
             ) : error || (!loading && !hotel) ? (
                 <div className="min-h-screen flex items-center justify-center">
                     <div className="text-center space-y-4">
@@ -439,7 +438,9 @@ const HotelDetails = () => {
                                     <p className="text-[14px] font-bold text-slate-500 leading-relaxed max-w-4xl">{hotel.description}</p>
                                 </section>
 
-                                <HotelFacilities amenities={hotel.amenities || []} />
+                                <React.Suspense fallback={<div className="h-40 bg-slate-50 rounded-2xl animate-pulse" />}>
+                                    <HotelFacilities amenities={hotel.amenities || []} />
+                                </React.Suspense>
 
                                 <section id="rooms">
                                     <div className="flex flex-col gap-1 mb-6">
@@ -476,11 +477,17 @@ const HotelDetails = () => {
                                     <RelatedHotels currentHotelId={hotel.id} city={hotel.city} />
                                 </React.Suspense>
 
-                                <HotelPolicies />
+                                <React.Suspense fallback={<div className="h-20 bg-slate-50 rounded-xl animate-pulse" />}>
+                                    <HotelPolicies />
+                                </React.Suspense>
 
-                                <HotelFullDetails hotelName={hotel.name} />
+                                <React.Suspense fallback={<div className="h-20 bg-slate-50 rounded-xl animate-pulse" />}>
+                                    <HotelFullDetails hotelName={hotel.name} />
+                                </React.Suspense>
 
-                                <HotelNearbyPlaces landmarks={hotel.nearbyLandmarks || []} />
+                                <React.Suspense fallback={<div className="h-60 bg-slate-50 rounded-2xl animate-pulse" />}>
+                                    <HotelNearbyPlaces landmarks={hotel.nearbyLandmarks || []} />
+                                </React.Suspense>
                             </div>
 
                             <div className="lg:col-span-4 space-y-8">

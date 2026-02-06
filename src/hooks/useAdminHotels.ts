@@ -365,6 +365,9 @@ export function useAdminHotels(): UseAdminHotelsReturn {
             allowExtraBed: roomData.allowExtraBed,
             extraBedPrice: roomData.extraBedPrice,
             maxExtraBeds: roomData.maxExtraBeds,
+            beds: roomData.beds,
+            sofa: roomData.sofa,
+            isVisible: roomData.isVisible,
         };
 
         const response = await RoomsAPI.update(roomId, apiRoomData as any);
@@ -403,7 +406,10 @@ export function useAdminHotels(): UseAdminHotelsReturn {
             pricingPeriods: roomData.pricingPeriods || [],
             allowExtraBed: roomData.allowExtraBed || false,
             extraBedPrice: roomData.extraBedPrice || 0,
-            maxExtraBeds: roomData.maxExtraBeds || 1
+            maxExtraBeds: roomData.maxExtraBeds || 1,
+            beds: roomData.beds || '1 سرير كينج',
+            sofa: roomData.sofa || false,
+            isVisible: roomData.isVisible !== undefined ? roomData.isVisible : true,
         };
 
         const response = await RoomsAPI.create(hotelId, apiRoomData as any);

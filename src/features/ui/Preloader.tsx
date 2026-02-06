@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const messages = [
     "تجارب عالمية .. بمعايير استثنائية",
@@ -8,91 +7,104 @@ const messages = [
 ];
 
 const Preloader: React.FC = () => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [messageIndex, setMessageIndex] = useState(0);
+    const [isVisible, setIsVisible] = useState(true);
+    const [shouldRender, setShouldRender] = useState(true);
 
     useEffect(() => {
-        // Rotate text every 1.2 seconds
-        const textInterval = setInterval(() => {
-            setMessageIndex((prev) => (prev + 1) % messages.length);
-        }, 1200);
+        // Start exit animation slightly before unmounting
+        const exitTimer = setTimeout(() => {
+            setIsVisible(false);
+        }, 3000); // 3s total duration
 
-        // Finish loading after enough time to see messages
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-            clearInterval(textInterval);
-        }, 3800);
+        // Unmount from DOM
+        const unmountTimer = setTimeout(() => {
+            setShouldRender(false);
+        }, 3600); // Wait for exit animation (0.6s)
 
         return () => {
-            clearTimeout(timer);
-            clearInterval(textInterval);
+            clearTimeout(exitTimer);
+            clearTimeout(unmountTimer);
         };
     }, []);
 
-    // Animation Variants
-    const containerVariants = {
-        initial: { opacity: 1 },
-        exit: {
-            y: '-100%',
-            transition: {
-                duration: 1.2,
-                ease: [0.76, 0, 0.24, 1] as any, // Custom "Cinematic" Ease
-                delay: 0.2
-            }
-        }
-    };
+    if (!shouldRender) return null;
 
     return (
-        <AnimatePresence mode="wait">
-            {isLoading && (
-                <motion.div
-                    className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white"
-                    variants={containerVariants}
-                    initial="initial"
-                    exit="exit"
-                >
-                    <motion.img
-                        src="/assets/images/ui/logo.png"
-                        alt="Diafat Khulud"
-                        className="w-32 md:w-40 h-auto object-contain mb-8"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1.15 }}
-                        style={{ willChange: "transform, opacity" }}
-                        transition={{
-                            scale: { duration: 3.8, ease: "linear" },
-                            opacity: { duration: 0.6, ease: "easeOut" }
+        <div
+            className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white transition-transform duration-700 ease-[cubic-bezier(0.76,0,0.24,1)] ${isVisible ? 'translate-y-0' : '-translate-y-full'
+                }`}
+            style={{ willChange: 'transform' }}
+        >
+            {/* Logo Animation */}
+            <div className="relative mb-8">
+                <img
+                    src="/assets/images/ui/logo.png"
+                    alt="Diafat Khulud"
+                    className="w-32 md:w-40 h-auto object-contain animate-logo-enter"
+                />
+            </div>
+
+            {/* Modern Progress Bar */}
+            <div className="w-56 h-0.5 relative rounded-full overflow-hidden mb-8">
+                {/* Track */}
+                <div className="absolute inset-0 bg-slate-100/80 w-full h-full"></div>
+                {/* Fill with Gradient & Glow */}
+                <div className="absolute inset-0 h-full bg-gradient-to-r from-[#D6B372] via-[#F3E5AB] to-[#D6B372] animate-progress-fill origin-right rtl:origin-right ltr:origin-left shadow-[0_0_10px_rgba(214,179,114,0.5)]"></div>
+            </div>
+
+            {/* Rotating Text - CSS Only */}
+            <div className="h-8 relative w-full flex justify-center items-center overflow-hidden">
+                {messages.map((msg, index) => (
+                    <p
+                        key={index}
+                        className="absolute w-full text-center text-sm md:text-base font-bold text-slate-700 tracking-wide font-cairo opacity-0 animate-text-cycle"
+                        style={{
+                            animationDelay: `${0.2 + (index * 1.3)}s`
                         }}
-                    />
+                    >
+                        {msg}
+                    </p>
+                ))}
+            </div>
 
-                    {/* Smooth Progress Bar */}
-                    <div className="w-48 h-1 bg-slate-100 rounded-full overflow-hidden mb-6">
-                        <motion.div
-                            className="h-full bg-gold"
-                            initial={{ width: "0%" }}
-                            animate={{ width: "100%" }}
-                            transition={{ duration: 3.5, ease: "easeInOut" }}
-                        />
-                    </div>
+            <style>{`
+                @keyframes logo-enter {
+                    0% { opacity: 0; transform: scale(0.8); }
+                    100% { opacity: 1; transform: scale(1.15); }
+                }
+                
+                @keyframes progress-fill {
+                    0% { width: 0%; }
+                    100% { width: 100%; }
+                }
 
-                    {/* Rotating Luxurious Text */}
-                    <div className="h-8 flex items-center justify-center overflow-hidden">
-                        <AnimatePresence mode="wait">
-                            <motion.p
-                                key={messageIndex}
-                                className="text-sm md:text-base font-bold text-slate-700 tracking-wide font-cairo"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ duration: 0.5 }}
-                            >
-                                {messages[messageIndex]}
-                            </motion.p>
-                        </AnimatePresence>
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                @keyframes text-appear {
+                    0% { opacity: 0; transform: translateY(10px); }
+                    15% { opacity: 1; transform: translateY(0); }
+                    80% { opacity: 1; transform: translateY(0); }
+                    100% { opacity: 0; transform: translateY(-5px); }
+                }
+
+                .animate-logo-enter {
+                    animation: logo-enter 3s linear forwards;
+                    will-change: transform, opacity;
+                }
+
+                .animate-progress-fill {
+                    animation: progress-fill 3.5s ease-in-out forwards;
+                    will-change: width;
+                }
+
+                .animate-text-cycle {
+                    animation-name: text-appear;
+                    animation-duration: 1.2s;
+                    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+                    animation-fill-mode: forwards;
+                    will-change: transform, opacity;
+                }
+            `}</style>
+        </div>
     );
 };
 
-export default Preloader;
+export default React.memo(Preloader);

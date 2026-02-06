@@ -13,17 +13,55 @@ const Hotels = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
-    const cityFilter = searchParams.get('city') as 'makkah' | 'madinah' | null;
-    const checkIn = searchParams.get('checkIn');
-    const checkOut = searchParams.get('checkOut');
-    const guests = searchParams.get('guests') ? Number(searchParams.get('guests')) : undefined;
 
-    // [ENFORCEMENT] Relaxed: Allow if City is present (for Top Destinations) OR if all params are present
-    const hasRequiredParams = Boolean(cityFilter);
+    // Get URL params
+    const urlCityFilter = searchParams.get('city') as 'makkah' | 'madinah' | null;
+    const urlCheckIn = searchParams.get('checkIn');
+    const urlCheckOut = searchParams.get('checkOut');
+    const urlGuests = searchParams.get('guests') ? Number(searchParams.get('guests')) : undefined;
 
     // [PERSISTENCE] Check if we can restore from context
     const { searchData } = useSearch();
-    const canRestore = !hasRequiredParams && !cityFilter && searchData.hasSearched && !!searchData.destination;
+
+    // [FIX] Compute effective params: Use URL if available, otherwise use SearchContext
+    // This ensures the hook gets correct params immediately without waiting for restore navigate
+    const hasUrlParams = Boolean(urlCityFilter);
+    const hasContextData = searchData.hasSearched && !!searchData.destination;
+
+    // Helper to format date from context
+    const formatContextDate = (date: Date | null): string | null => {
+        if (!date) return null;
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Helper to normalize city name
+    const normalizeCity = (city: string): string => {
+        const cityLower = city?.toLowerCase() || '';
+        if (['مكة المكرمة', 'مكه المكرمه', 'مكة', 'مكه', 'makkah'].includes(cityLower) || cityLower.includes('مكة') || cityLower.includes('makkah')) {
+            return 'makkah';
+        } else if (['المدينة المنورة', 'المدينه المنوره', 'المدينة', 'المدينه', 'madinah'].includes(cityLower) || cityLower.includes('مدينة') || cityLower.includes('madinah')) {
+            return 'madinah';
+        } else if (['جدة', 'جده', 'jeddah'].includes(cityLower)) {
+            return 'jeddah';
+        } else if (['الرياض', 'riyadh'].includes(cityLower)) {
+            return 'riyadh';
+        }
+        return city;
+    };
+
+    // Effective params: prioritize URL, fallback to context
+    const cityFilter = urlCityFilter || (hasContextData ? normalizeCity(searchData.destination) as 'makkah' | 'madinah' : null);
+    const checkIn = urlCheckIn || (hasContextData ? formatContextDate(searchData.checkIn) : null);
+    const checkOut = urlCheckOut || (hasContextData ? formatContextDate(searchData.checkOut) : null);
+    const guests = urlGuests || (hasContextData && searchData.adults ? searchData.adults : undefined);
+
+    // [ENFORCEMENT] Relaxed: Allow if City is present (for Top Destinations) OR if all params are present
+    const hasRequiredParams = Boolean(cityFilter);
+    const canRestore = !urlCityFilter && hasContextData;
 
     // [STATE] Restoring state to prevent flash of "Search Required"
     const [isRestoring, setIsRestoring] = useState(canRestore);
@@ -40,7 +78,7 @@ const Hotels = () => {
         }
     }, [hasRequiredParams, isRestoring]);
 
-    // 🚀 Use the new API-connected hook
+    // 🚀 Use the new API-connected hook with EFFECTIVE params (URL or Context)
     const {
         filteredHotels,
         loading,
@@ -57,13 +95,29 @@ const Hotels = () => {
     } = useFrontendHotels(cityFilter, { checkIn, checkOut, guests });
 
     // [PERSISTENCE EFFECT] Restore search from Context if URL params are missing
+    const hasRestored = useRef(false);
+
     useEffect(() => {
-        // If URL params are missing (and we're not just viewing "Top Destinations" via city),
-        // try to restore from Context
-        if (canRestore) {
+        // FIRST: If URL has city param, data is restored - ALWAYS stop loading
+        if (cityFilter) {
+            setIsRestoring(false);
+            hasRestored.current = true;
+            return;
+        }
+
+        // Skip if already attempted restore in this session (prevents infinite loops)
+        if (hasRestored.current) {
+            setIsRestoring(false);
+            return;
+        }
+
+        // If URL is empty but Context has search data, restore it
+        if (searchData.hasSearched && searchData.destination) {
+            hasRestored.current = true;
+
             const params = new URLSearchParams();
 
-            // Map context data back to URL params with normalization (Same as handleSearch)
+            // Map context data back to URL params with normalization
             let cityValue = searchData.destination;
             const cityLower = cityValue?.toLowerCase() || '';
 
@@ -100,19 +154,17 @@ const Hotels = () => {
             }
 
             if (searchData.adults) {
-                // [MODIFIED] Only count adults for filtering per user request
                 const totalGuests = (searchData.adults || 0);
                 if (totalGuests > 0) params.set('guests', totalGuests.toString());
             }
 
-            // Redirect to restore session
             console.log("Restoring session from context...", params.toString());
             navigate(`/hotels?${params.toString()}`, { replace: true });
         } else {
-            // If we can't restore or don't need to, stop restoring state
+            // No data to restore - stop loading state
             setIsRestoring(false);
         }
-    }, [canRestore, searchData, navigate]);
+    }, [cityFilter, searchData.hasSearched, searchData.destination, navigate]);
 
     // Local state for UI (synced with hook)
     const [priceRange, setPriceRange] = useState(filters.maxPrice || 3000);

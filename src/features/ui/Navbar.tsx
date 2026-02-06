@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { User, LogOut, Shield } from 'lucide-react';
@@ -14,7 +14,7 @@ const Navbar: React.FC = () => {
   const currentPath = location.pathname;
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -30,13 +30,14 @@ const Navbar: React.FC = () => {
       setIsScrolled(currentScrollY > 40);
 
       // Scroll to hide/show logic
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      // Show immediately if scrolling up OR near top
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
         setIsVisible(false); // Scrolling down
       } else {
         setIsVisible(true); // Scrolling up
       }
 
-      setLastScrollY(currentScrollY);
+      lastScrollY.current = currentScrollY;
     };
 
     const observer = new MutationObserver((mutations) => {
@@ -167,7 +168,7 @@ const Navbar: React.FC = () => {
       </nav>
 
       {/* Mobile Top Header - Floating Capsule */}
-      <div className={`mobile-header-bar md:hidden fixed top-5 left-0 right-0 z-[1000] px-6 transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${isMenuOpen ? '-translate-y-28 opacity-0' : (isVisible ? 'translate-y-0 opacity-100' : '-translate-y-28 opacity-0')}`}>
+      <div className={`mobile-header-bar md:hidden fixed top-5 left-0 right-0 z-[1000] px-6 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isMenuOpen ? '-translate-y-28 opacity-0' : (isVisible ? 'translate-y-0 opacity-100' : '-translate-y-28 opacity-0')}`}>
         <div
           className={`max-w-2xl mx-auto border border-slate-200/50 h-16 rounded-full flex items-center justify-between px-5 transition-all duration-500 ${isScrolled ? 'shadow-xl' : 'shadow-lg'}`}
           style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}

@@ -1,6 +1,7 @@
+import React from 'react';
 import { Users, Maximize, BedDouble, Plus, Minus, Info, Eye, Utensils, Check, Sparkles, MessageCircle } from 'lucide-react';
 import { MEAL_PLAN_LABELS } from '../../../constants/hotelConstants';
-import { formatDateArabic } from '../../../contexts/SearchContext';
+import { formatDateArabic, useSearch } from '../../../contexts/SearchContext';
 
 interface Room {
     id: string;
@@ -73,6 +74,7 @@ const HotelRoomCard: React.FC<HotelRoomCardProps> = ({
                         src={group.images?.[0] || hotelMainImage}
                         alt={group.name}
                         className="absolute inset-0 w-full h-full object-cover lg:rounded-l-[2.5rem]"
+                        loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60"></div>
                     <div className="absolute bottom-5 right-5 bg-black/60 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-[12px] font-bold flex items-center gap-2 shadow-lg">
@@ -127,6 +129,37 @@ const HotelRoomCard: React.FC<HotelRoomCardProps> = ({
 
                                 return (
                                     <div key={room.id} className="pt-2">
+
+                                        {/* [NEW] Room Stock Warning */}
+                                        {(() => {
+                                            const { searchData } = useSearch();
+                                            // Check this specific room's inventory
+                                            if (searchData?.rooms && room.inventory > 0 && searchData.rooms > room.inventory) {
+                                                return (
+                                                    <div className="w-full mb-6 bg-orange-50/50 backdrop-blur-md border border-orange-200/50 rounded-xl p-3 flex flex-row items-center justify-between gap-4 shadow-sm border-r-4 border-r-orange-400">
+                                                        <div className="flex items-center gap-3">
+                                                            <div>
+                                                                <h5 className="text-[13px] font-black text-orange-900 leading-tight mb-0.5">المخزون به {room.inventory} غرف فقط</h5>
+                                                                <p className="text-[11px] font-bold text-orange-700/80">
+                                                                    طلبت {searchData.rooms} غرف
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <a
+                                                            href={`https://wa.me/966553882445?text=${encodeURIComponent(`السلام عليكم، أحتاج حجز ${searchData.rooms} غرف من نوع ${room.name} في فندق ${group.name} ولكن المتاح ${room.inventory} فقط.`)}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 shadow-sm transition-all active:scale-95 group/btn whitespace-nowrap"
+                                                        >
+                                                            <span>تواصل معنا للمزيد من الغرف</span>
+                                                            <MessageCircle size={14} className="group-hover/btn:-translate-x-1 transition-transform" />
+                                                        </a>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
 
                                         {/* Partial Availability Banner - Exact Match */}
                                         {/* Partial Availability Banner - Premium Design */}
@@ -281,6 +314,27 @@ const HotelRoomCard: React.FC<HotelRoomCardProps> = ({
             </div>
         </div>
     );
+}
+
+// 🚀 Smart Memoization
+const arePropsEqual = (prev: HotelRoomCardProps, next: HotelRoomCardProps) => {
+    // 1. Group Identity Check
+    if (prev.group !== next.group) return false;
+
+    // 2. Simple Props
+    if (prev.hasDates !== next.hasDates) return false;
+    if (prev.hotelMainImage !== next.hotelMainImage) return false;
+
+    // 3. Check for specific variants updates
+    // Only re-render if quantity/extra-beds changed for rooms IN THIS GROUP
+    const hasChanged = next.group.variants.some(room => {
+        return (
+            prev.roomQuantities[room.id] !== next.roomQuantities[room.id] ||
+            prev.extraBedCounts[room.id] !== next.extraBedCounts[room.id]
+        );
+    });
+
+    return !hasChanged; // Equal if NOT changed
 };
 
-export default HotelRoomCard;
+export default React.memo(HotelRoomCard, arePropsEqual);

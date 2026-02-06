@@ -49,11 +49,19 @@ const PremiumSearch: React.FC<PremiumSearchProps> = ({ onSearch, className = "",
     }, [searchData.destination]);
 
     // [AUTO-SEARCH] Trigger search automatically when on Hotels page
+    // [FIX] Check if user is STILL on Hotels page inside the timeout to prevent redirect loops
     useEffect(() => {
         if (!isHotelsPage) return;
 
         // Debounce to avoid rapid reloads
         const timer = setTimeout(() => {
+            // [FIX] Re-check if we're still on Hotels page (user might have navigated away during debounce)
+            const currentPath = window.location.pathname;
+            if (!currentPath.includes('/hotels')) {
+                console.log('[AUTO-SEARCH] User navigated away, skipping search');
+                return;
+            }
+
             // Only search if we have a valid destination and valid date range (if dates are partially selected)
             // Note: If dates are null, it's fine (search all). But if checkIn is set but checkOut is missing, wait.
             const isDatePartial = searchData.checkIn && !searchData.checkOut;

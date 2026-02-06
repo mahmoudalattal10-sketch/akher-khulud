@@ -69,7 +69,7 @@ const RoomSkeleton = () => (
     </div>
 );
 
-const HotelRooms: React.FC<HotelRoomsProps> = ({
+const HotelRooms: React.FC<HotelRoomsProps> = React.memo(({
     groups,
     selectedRoom,
     roomQuantities,
@@ -134,6 +134,6 @@ const HotelRooms: React.FC<HotelRoomsProps> = ({
             )}
         </div>
     );
-};
+});
 
 export default HotelRooms;

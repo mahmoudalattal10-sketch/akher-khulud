@@ -1,5 +1,5 @@
 
-import { Mail, ArrowRight, Instagram, Twitter, Facebook, Linkedin, Phone, MapPin } from 'lucide-react';
+import { Mail, ArrowRight, Instagram, Twitter, Facebook, Linkedin, Phone, MapPin, ShieldCheck, FileText, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import brandConfig from '../../config/brandConfig';
 
@@ -75,8 +75,14 @@ export default function Footer() {
                   <div className="w-8 h-8 rounded-full bg-gold-50 text-gold flex items-center justify-center group-hover:bg-gold group-hover:text-white transition-all">
                     <Mail size={14} />
                   </div>
-                  <span className="font-bold text-sm">{brandConfig.contact.email}</span>
+                  <span className="font-bold text-sm bg-transparent">{brandConfig.contact.email}</span>
                 </a>
+                <div className="flex items-center gap-2 text-gray-700 group">
+                  <div className="w-8 h-8 rounded-full bg-gold-50 text-gold flex items-center justify-center transition-all">
+                    <MapPin size={14} />
+                  </div>
+                  <span className="font-bold text-sm">المدينة المنورة بجانب بئر عثمان بن عفان</span>
+                </div>
               </div>
             </div>
 
@@ -120,22 +126,31 @@ export default function Footer() {
               </ul>
             </div>
 
-            {/* Col 4: Newsletter */}
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex flex-col gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 mb-1">النشرة البريدية</h4>
-                <p className="text-xs text-gray-500">اشترك لتصلك أحدث العروض الحصرية.</p>
-              </div>
-              <form className="flex flex-col gap-2">
-                <input
-                  type="email"
-                  placeholder="البريد الإلكتروني"
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold transition-colors text-right"
-                />
-                <button className="bg-primary hover:bg-primary text-white py-2.5 rounded-lg text-sm font-bold transition-transform active:scale-95">
-                  اشتراك
-                </button>
-              </form>
+            {/* Col 4: Licensed Company */}
+            {/* Col 4: Licensed Company */}
+            <div className="flex flex-col">
+              <h4 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center text-gold">
+                  <ShieldCheck size={18} />
+                </span>
+                <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">شركة مرخصة</span>
+              </h4>
+              <ul className="space-y-4">
+                <li className="flex flex-col gap-1.5 p-3 rounded-xl hover:bg-white hover:shadow-sm transition-all duration-300 border border-transparent hover:border-gray-50 group">
+                  <span className="text-xs font-semibold text-gray-400 flex items-center gap-2 group-hover:text-gold transition-colors">
+                    <FileText size={14} className="opacity-50 group-hover:opacity-100" />
+                    ترخيص وزارة السياحة
+                  </span>
+                  <span dir="ltr" className="font-bold text-gray-900 tracking-wider font-mono text-sm group-hover:tracking-widest transition-all">73104531</span>
+                </li>
+                <li className="flex flex-col gap-1.5 p-3 rounded-xl hover:bg-white hover:shadow-sm transition-all duration-300 border border-transparent hover:border-gray-50 group">
+                  <span className="text-xs font-semibold text-gray-400 flex items-center gap-2 group-hover:text-emerald-600 transition-colors">
+                    <Building2 size={14} className="opacity-50 group-hover:opacity-100" />
+                    السجل التجاري
+                  </span>
+                  <span dir="ltr" className="font-bold text-gray-900 tracking-wider font-mono text-sm group-hover:tracking-widest transition-all">4031284581</span>
+                </li>
+              </ul>
             </div>
 
           </div>
@@ -150,10 +165,19 @@ export default function Footer() {
                 <span dir="ltr" className="font-bold text-slate-500 group-hover:text-gold transition-colors">elattal co.</span>
               </a>
             </p>
+
+            {/* Payment Methods */}
+            <div className="flex items-center gap-4">
+              <span className="text-gray-400 text-xs font-medium">طرق الدفع:</span>
+              <img src="/assets/images/ui/visa-logo.png" alt="Visa" className="h-12 w-auto object-contain" />
+              <img src="/assets/images/ui/mastercard-logo.png" alt="Mastercard" className="h-[18px] w-auto object-contain" />
+              <img src="/assets/images/ui/mada-logo.png" alt="مدى Mada" className="h-12 w-auto object-contain" />
+            </div>
+
             <div className="flex gap-6 text-xs text-gray-400 font-medium">
               <Link to="/privacy" className="hover:text-gold transition-colors">الخصوصية</Link>
               <Link to="/terms" className="hover:text-gold transition-colors">الشروط</Link>
-              <Link to="/sitemap" className="hover:text-gold transition-colors">خريطة الموقع</Link>
+              <Link to="/help" className="hover:text-gold transition-colors">المساعدة</Link>
             </div>
           </div>
         </div>
