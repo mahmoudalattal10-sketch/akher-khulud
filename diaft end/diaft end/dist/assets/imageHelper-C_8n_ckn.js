@@ -1,0 +1,1 @@
+const e=t=>{if(!t||t==="undefined"||t==="null")return"/assets/images/ui/logo.png";if(t.startsWith("http")||t.startsWith("https")||t.startsWith("blob:"))return t;const s=t.startsWith("/")?t:`/${t}`;return encodeURI(s)};export{e as g};
